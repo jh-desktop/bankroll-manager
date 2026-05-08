@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#0a0a12"/>
+
+  <!-- Left G: white ring -->
+  <circle cx="143" cy="224" r="130" fill="white"/>
+  <circle cx="143" cy="224" r="57" fill="#0a0a12"/>
+  <!-- Left G: cut out right opening (upper half) -->
+  <rect x="90" y="94" width="185" height="145" fill="#0a0a12"/>
+  <!-- Left G: horizontal bar -->
+  <rect x="90" y="207" width="183" height="34" fill="white"/>
+  <!-- Left G: right vertical bar -->
+  <rect x="241" y="207" width="32" height="100" fill="white"/>
+
+  <!-- Right G: white ring -->
+  <circle cx="369" cy="224" r="130" fill="white"/>
+  <circle cx="369" cy="224" r="57" fill="#0a0a12"/>
+  <!-- Right G: cut out right opening (upper half) -->
+  <rect x="316" y="94" width="185" height="145" fill="#0a0a12"/>
+  <!-- Right G: horizontal bar -->
+  <rect x="316" y="207" width="183" height="34" fill="white"/>
+  <!-- Right G: right vertical bar -->
+  <rect x="467" y="207" width="32" height="100" fill="white"/>
+
+  <!-- Red slashes left G -->
+  <polygon points="58,94  100,94  52,160  10,160" fill="#d62323"/>
+  <polygon points="112,94  154,94  106,160  64,160" fill="#d62323"/>
+
+  <!-- Red slashes right G -->
+  <polygon points="284,94  326,94  278,160  236,160" fill="#d62323"/>
+  <polygon points="338,94  380,94  332,160  290,160" fill="#d62323"/>
+
+  <!-- POKER text -->
+  <text x="256" y="430" font-family="Arial Black,Arial,sans-serif" font-weight="900"
+        font-size="76" fill="white" text-anchor="middle" letter-spacing="6">POKER</text>
+</svg>
