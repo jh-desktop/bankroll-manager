@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { AdminProvider } from './context/AdminContext'
-import { useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
 import BroadcastBanner from './components/BroadcastBanner'
+import LoginPage from './pages/LoginPage'
 import CalendarPage from './pages/CalendarPage'
 import StatusPage from './pages/StatusPage'
 import UsersPage from './pages/UsersPage'
@@ -16,10 +16,20 @@ import { useBroadcast } from './hooks/useBroadcast'
 import './App.css'
 
 function AppInner() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { permission, enable } = useNotification(user?.uid ?? null)
   const { banner, dismiss } = useBroadcast()
   const exitingRef = useRef(false)
+
+  // 비로그인으로 계속하기를 선택했는지 (세션 유지)
+  const [skipped, setSkipped] = useState(
+    () => sessionStorage.getItem('login_skipped') === 'true'
+  )
+
+  const handleSkip = () => {
+    sessionStorage.setItem('login_skipped', 'true')
+    setSkipped(true)
+  }
 
   useEffect(() => {
     window.history.pushState(null, '')
@@ -33,18 +43,26 @@ function AppInner() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
+  // 로딩 중
+  if (loading) return null
+
+  // 비로그인이고 스킵도 안 했으면 로그인 페이지
+  if (!user && !skipped) {
+    return <LoginPage onSkip={handleSkip} />
+  }
+
   return (
     <BrowserRouter>
       <Navbar notifPermission={permission} onEnableNotif={enable} />
       <BroadcastBanner banner={banner} onDismiss={dismiss} />
       <div className="nav-pt">
         <Routes>
-          <Route path="/"       element={<CalendarPage />} />
-          <Route path="/status" element={<StatusPage />} />
-          <Route path="/users"  element={<UsersPage />} />
+          <Route path="/"        element={<CalendarPage />} />
+          <Route path="/status"  element={<StatusPage />} />
+          <Route path="/users"   element={<UsersPage />} />
           <Route path="/history" element={<HistoryPage />} />
-          <Route path="/stats"  element={<StatsPage />} />
-          <Route path="/admin"  element={<AdminPage />} />
+          <Route path="/stats"   element={<StatsPage />} />
+          <Route path="/admin"   element={<AdminPage />} />
         </Routes>
       </div>
     </BrowserRouter>
