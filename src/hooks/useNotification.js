@@ -3,7 +3,24 @@ import { getToken, onMessage } from 'firebase/messaging'
 import { doc, setDoc } from 'firebase/firestore'
 import { messaging, db } from '../firebase'
 
-export function useNotification() {
+async function saveToken(token, uid) {
+  await setDoc(doc(db, 'bankroll_fcm_tokens', token), {
+    updatedAt: new Date().toISOString(),
+    uid: uid ?? null,
+  })
+}
+
+async function getAndSaveToken(uid) {
+  const swReg = await navigator.serviceWorker.register('/sw.js')
+  const token = await getToken(messaging, {
+    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+    serviceWorkerRegistration: swReg,
+  })
+  if (token) await saveToken(token, uid)
+  return token
+}
+
+export function useNotification(uid = null) {
   const [permission, setPermission] = useState(
     'Notification' in window ? Notification.permission : 'denied'
   )
@@ -20,48 +37,25 @@ export function useNotification() {
     })
   }, [])
 
-  // Auto-register token if already granted (e.g. page reload)
+  // 권한이 있을 때, 또는 uid가 바뀔 때(로그인/로그아웃) 토큰 재저장
   useEffect(() => {
     if (!messaging || permission !== 'granted') return
-    ;(async () => {
-      try {
-        const swReg = await navigator.serviceWorker.register('/sw.js')
-        const token = await getToken(messaging, {
-          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-          serviceWorkerRegistration: swReg,
-        })
-        if (token) {
-          await setDoc(doc(db, 'bankroll_fcm_tokens', token), {
-            updatedAt: new Date().toISOString(),
-          })
-        }
-      } catch (e) { void e }
-    })()
-  }, [permission])
+    getAndSaveToken(uid).catch(() => {})
+  }, [permission, uid])
 
-  // Must be called from a user gesture (button click) — required for iOS
+  // Must be called from a user gesture — required for iOS
   const enable = useCallback(async () => {
     if (!messaging || !('Notification' in window)) return false
     try {
       const result = await Notification.requestPermission()
       setPermission(result)
       if (result !== 'granted') return false
-
-      const swReg = await navigator.serviceWorker.register('/sw.js')
-      const token = await getToken(messaging, {
-        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-        serviceWorkerRegistration: swReg,
-      })
-      if (token) {
-        await setDoc(doc(db, 'bankroll_fcm_tokens', token), {
-          updatedAt: new Date().toISOString(),
-        })
-      }
+      await getAndSaveToken(uid)
       return true
     } catch (e) {
       return false
     }
-  }, [])
+  }, [uid])
 
   return { permission, enable }
 }
