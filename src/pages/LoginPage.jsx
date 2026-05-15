@@ -14,7 +14,7 @@ export default function LoginPage({ onSkip }) {
       await signIn()
     } catch (e) {
       if (e.code !== 'auth/popup-closed-by-user') {
-        setError(`[${e.code}] ${e.message}`)
+        setError('로그인에 실패했습니다. 다시 시도해주세요.')
       }
       setLoading(false)
     }
