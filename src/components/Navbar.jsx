@@ -10,6 +10,10 @@ const links = [
   { path: '/history', label: '이력' },
 ]
 
+const adminLinks = [
+  { path: '/admin', label: '📢 알림발송' },
+]
+
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone = window.navigator.standalone === true
 
@@ -41,6 +45,16 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
               to={l.path}
               end={l.path === '/'}
               className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+            >
+              {l.label}
+            </NavLink>
+          ))}
+          {adminMode && adminLinks.map(l => (
+            <NavLink
+              key={l.path}
+              to={l.path}
+              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+              style={{ color: '#f59e0b' }}
             >
               {l.label}
             </NavLink>

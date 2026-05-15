@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 
-const ADMIN_PW = '0000'
+const ADMIN_PW = '7730'
 const Ctx = createContext(null)
 
 export function AdminProvider({ children }) {

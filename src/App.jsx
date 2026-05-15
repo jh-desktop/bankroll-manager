@@ -2,16 +2,20 @@ import { useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AdminProvider } from './context/AdminContext'
 import Navbar from './components/Navbar'
+import BroadcastBanner from './components/BroadcastBanner'
 import CalendarPage from './pages/CalendarPage'
 import StatusPage from './pages/StatusPage'
 import UsersPage from './pages/UsersPage'
 import HistoryPage from './pages/HistoryPage'
 import StatsPage from './pages/StatsPage'
+import AdminPage from './pages/AdminPage'
 import { useNotification } from './hooks/useNotification'
+import { useBroadcast } from './hooks/useBroadcast'
 import './App.css'
 
 function AppInner() {
   const { permission, enable } = useNotification()
+  const { banner, dismiss } = useBroadcast()
   const exitingRef = useRef(false)
 
   useEffect(() => {
@@ -36,6 +40,7 @@ function AppInner() {
   return (
     <BrowserRouter>
       <Navbar notifPermission={permission} onEnableNotif={enable} />
+      <BroadcastBanner banner={banner} onDismiss={dismiss} />
       <div className="nav-pt">
         <Routes>
           <Route path="/" element={<CalendarPage />} />
@@ -43,6 +48,7 @@ function AppInner() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/stats"   element={<StatsPage />} />
+          <Route path="/admin"   element={<AdminPage />} />
         </Routes>
       </div>
     </BrowserRouter>
