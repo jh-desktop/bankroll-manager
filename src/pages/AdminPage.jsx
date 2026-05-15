@@ -37,15 +37,27 @@ export default function AdminPage() {
     if (!title.trim() || !body.trim()) return
     setSending(true)
     try {
+      // FCM 푸시 발송 (앱 닫혀있어도 수신)
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim(), body: body.trim() }),
+      })
+      const data = await res.json()
+
+      // Firestore에 이력 저장
       await addDoc(collection(db, 'admin_broadcasts'), {
         title: title.trim(),
         body: body.trim(),
         sentAt: new Date().toISOString(),
+        sentCount: data.sent ?? 0,
+        totalTokens: data.total ?? 0,
       })
-      setSent(true)
+
+      setSent(data.sent ?? 0)
       setTitle('')
       setBody('')
-      setTimeout(() => setSent(false), 2500)
+      setTimeout(() => setSent(false), 3000)
     } catch (e) {
       alert('발송 실패: ' + e.message)
     } finally {
@@ -96,11 +108,11 @@ export default function AdminPage() {
             disabled={sending || !title.trim() || !body.trim()}
             style={{ width: '100%' }}
           >
-            {sent ? '✓ 발송 완료' : sending ? '발송 중…' : '📢 전체 유저에게 발송'}
+            {sent !== false ? `✓ ${sent}명에게 발송 완료` : sending ? '발송 중…' : '📢 전체 유저에게 발송'}
           </button>
 
           <div style={{ fontSize: '0.75rem', color: '#475569', textAlign: 'center' }}>
-            앱을 열고 있는 모든 유저에게 즉시 전달됩니다.
+            알림을 허용한 모든 유저에게 푸시 알림이 전송됩니다.
           </div>
         </div>
       </div>
@@ -122,11 +134,16 @@ export default function AdminPage() {
                     {item.body}
                   </div>
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#475569', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {item.sentAt ? new Date(item.sentAt).toLocaleString('ko-KR', {
-                    month: 'numeric', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                  }) : '—'}
+                <div style={{ fontSize: '0.7rem', color: '#475569', flexShrink: 0, textAlign: 'right' }}>
+                  <div style={{ whiteSpace: 'nowrap' }}>
+                    {item.sentAt ? new Date(item.sentAt).toLocaleString('ko-KR', {
+                      month: 'numeric', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    }) : '—'}
+                  </div>
+                  {item.sentCount != null && (
+                    <div style={{ color: '#10b981', marginTop: '2px' }}>{item.sentCount}명 수신</div>
+                  )}
                 </div>
               </div>
             </div>
