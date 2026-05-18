@@ -19,6 +19,23 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
+const compressImage = (file) => new Promise((resolve) => {
+  const img = new Image()
+  img.onload = () => {
+    const MAX = 1200
+    let { width, height } = img
+    if (width > MAX || height > MAX) {
+      if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+      else { width = Math.round(width * MAX / height); height = MAX }
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = width; canvas.height = height
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8)
+  }
+  img.src = URL.createObjectURL(file)
+})
+
 export default function PostDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -86,13 +103,15 @@ export default function PostDetailPage() {
     try {
       let imageURL = editPreview  // 기존 이미지 유지 기본값
       if (editImage) {
-        setEditProgress(30)
-        const base64 = await toBase64(editImage)
-        setEditProgress(60)
+        setEditProgress(20)
+        const compressed = await compressImage(editImage)
+        setEditProgress(40)
+        const base64 = await toBase64(compressed)
+        setEditProgress(70)
         const res = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, filename: editImage.name, mimeType: editImage.type }),
+          body: JSON.stringify({ base64, filename: editImage.name, mimeType: 'image/jpeg' }),
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)

@@ -18,6 +18,24 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
+// 최대 1200px, JPEG 80% 품질로 압축 → base64 기준 ~300KB 이내
+const compressImage = (file) => new Promise((resolve) => {
+  const img = new Image()
+  img.onload = () => {
+    const MAX = 1200
+    let { width, height } = img
+    if (width > MAX || height > MAX) {
+      if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+      else { width = Math.round(width * MAX / height); height = MAX }
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = width; canvas.height = height
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8)
+  }
+  img.src = URL.createObjectURL(file)
+})
+
 export default function BoardPage() {
   const { user } = useAuth()
   const { adminMode } = useAdmin()
@@ -65,13 +83,15 @@ export default function BoardPage() {
     try {
       let imageURL = null
       if (imageFile) {
-        setUploadProgress(30)
-        const base64 = await toBase64(imageFile)
-        setUploadProgress(60)
+        setUploadProgress(20)
+        const compressed = await compressImage(imageFile)
+        setUploadProgress(40)
+        const base64 = await toBase64(compressed)
+        setUploadProgress(70)
         const res = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, filename: imageFile.name, mimeType: imageFile.type }),
+          body: JSON.stringify({ base64, filename: imageFile.name, mimeType: 'image/jpeg' }),
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)
