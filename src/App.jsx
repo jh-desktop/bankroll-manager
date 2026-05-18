@@ -11,6 +11,8 @@ import UsersPage from './pages/UsersPage'
 import HistoryPage from './pages/HistoryPage'
 import StatsPage from './pages/StatsPage'
 import AdminPage from './pages/AdminPage'
+import BoardPage from './pages/BoardPage'
+import PostDetailPage from './pages/PostDetailPage'
 import { useNotification } from './hooks/useNotification'
 import { useBroadcast } from './hooks/useBroadcast'
 import './App.css'
@@ -63,6 +65,8 @@ function AppInner() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/stats"   element={<StatsPage />} />
           <Route path="/admin"   element={<AdminPage />} />
+          <Route path="/board"   element={<BoardPage />} />
+          <Route path="/board/:id" element={<PostDetailPage />} />
         </Routes>
       </div>
     </BrowserRouter>

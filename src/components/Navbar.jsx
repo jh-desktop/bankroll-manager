@@ -4,15 +4,16 @@ import { useAdmin } from '../context/AdminContext'
 import { useAuth } from '../context/AuthContext'
 
 const links = [
-  { path: '/',        label: '달력' },
-  { path: '/status',  label: '현황' },
-  { path: '/stats',   label: '그래프' },
-  { path: '/users',   label: '사용자' },
-  { path: '/history', label: '이력' },
+  { path: '/',       label: '달력' },
+  { path: '/status', label: '현황' },
+  { path: '/stats',  label: '그래프' },
+  { path: '/board',  label: '게시판' },
 ]
 
 const adminLinks = [
-  { path: '/admin', label: '📢 알림발송' },
+  { path: '/users',  label: '사용자' },
+  { path: '/history',label: '이력' },
+  { path: '/admin',  label: '📢 알림' },
 ]
 
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
@@ -53,7 +54,6 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
             </NavLink>
           ))}
 
-          {/* 알림 버튼 */}
           {!granted && (
             <button className="nav-link" onClick={handleBell} disabled={enabling} title="알림 허용"
               style={{ background: 'none', border: 'none', cursor: 'pointer', borderRadius: '0.5rem', color: '#64748b', fontSize: '1rem', opacity: enabling ? 0.5 : 1 }}>
@@ -61,13 +61,11 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
             </button>
           )}
 
-          {/* 관리자 버튼 */}
           <button className="nav-link" onClick={() => adminMode ? exitAdmin() : openModal()}
             style={{ background: adminMode ? '#f59e0b22' : 'none', color: adminMode ? '#f59e0b' : '#64748b', border: 'none', cursor: 'pointer', borderRadius: '0.5rem' }}>
             🔑
           </button>
 
-          {/* 로그인된 유저 프로필 */}
           {user && (
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowUserMenu(p => !p)}
@@ -97,7 +95,6 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
         </div>
       </nav>
 
-      {/* 관리자 인증 모달 */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" style={{ maxWidth: '320px' }} onClick={e => e.stopPropagation()}>
@@ -116,7 +113,6 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
         </div>
       )}
 
-      {/* iOS 가이드 모달 */}
       {showIosGuide && (
         <div className="modal-overlay" onClick={() => setShowIosGuide(false)}>
           <div className="modal" style={{ maxWidth: '320px' }} onClick={e => e.stopPropagation()}>
