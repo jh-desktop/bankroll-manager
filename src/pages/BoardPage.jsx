@@ -4,13 +4,19 @@ import {
   collection, addDoc, query, orderBy, onSnapshot,
   serverTimestamp, doc, deleteDoc,
 } from 'firebase/firestore'
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '../firebase'
+import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { useAdmin } from '../context/AdminContext'
 import './BoardPage.css'
 
 const MAX_IMAGE_MB = 5
+
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload  = () => resolve(reader.result.split(',')[1])
+  reader.onerror = reject
+  reader.readAsDataURL(file)
+})
 
 export default function BoardPage() {
   const { user } = useAuth()
@@ -59,16 +65,18 @@ export default function BoardPage() {
     try {
       let imageURL = null
       if (imageFile) {
-        const path = `board_images/${Date.now()}_${imageFile.name}`
-        const storageRef = ref(storage, path)
-        await new Promise((resolve, reject) => {
-          const task = uploadBytesResumable(storageRef, imageFile)
-          task.on('state_changed',
-            s => setUploadProgress(Math.round(s.bytesTransferred / s.totalBytes * 100)),
-            reject,
-            async () => { imageURL = await getDownloadURL(task.snapshot.ref); resolve() }
-          )
+        setUploadProgress(30)
+        const base64 = await toBase64(imageFile)
+        setUploadProgress(60)
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, filename: imageFile.name, mimeType: imageFile.type }),
         })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+        imageURL = data.url
+        setUploadProgress(100)
       }
       await addDoc(collection(db, 'bankroll_posts'), {
         title: title.trim(),

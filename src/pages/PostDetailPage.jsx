@@ -1,17 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  doc, getDoc, updateDoc, deleteDoc, onSnapshot,
+  doc, updateDoc, deleteDoc, onSnapshot,
   collection, addDoc, query, orderBy, serverTimestamp,
   increment,
 } from 'firebase/firestore'
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '../firebase'
+import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { useAdmin } from '../context/AdminContext'
 import './BoardPage.css'
 
 const MAX_IMAGE_MB = 5
+
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload  = () => resolve(reader.result.split(',')[1])
+  reader.onerror = reject
+  reader.readAsDataURL(file)
+})
 
 export default function PostDetailPage() {
   const { id } = useParams()
@@ -80,16 +86,18 @@ export default function PostDetailPage() {
     try {
       let imageURL = editPreview  // 기존 이미지 유지 기본값
       if (editImage) {
-        const path = `board_images/${Date.now()}_${editImage.name}`
-        const storageRef = ref(storage, path)
-        await new Promise((resolve, reject) => {
-          const task = uploadBytesResumable(storageRef, editImage)
-          task.on('state_changed',
-            s => setEditProgress(Math.round(s.bytesTransferred / s.totalBytes * 100)),
-            reject,
-            async () => { imageURL = await getDownloadURL(task.snapshot.ref); resolve() }
-          )
+        setEditProgress(30)
+        const base64 = await toBase64(editImage)
+        setEditProgress(60)
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, filename: editImage.name, mimeType: editImage.type }),
         })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+        imageURL = data.url
+        setEditProgress(100)
       }
       await updateDoc(doc(db, 'bankroll_posts', id), {
         title: editTitle.trim(),
