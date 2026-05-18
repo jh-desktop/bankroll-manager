@@ -19,9 +19,9 @@ export default async function handler(req, res) {
   const { base64, filename, mimeType } = req.body ?? {}
   if (!base64 || !filename) return res.status(400).json({ error: 'base64 and filename required' })
 
-  // VITE_FIREBASE_STORAGE_BUCKET 환경변수 우선, 없으면 프로젝트 ID에서 유추
-  const bucketName = process.env.VITE_FIREBASE_STORAGE_BUCKET
-    ?? `${JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT).project_id}.firebasestorage.app`
+  const projectId = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT).project_id
+  // Admin SDK는 .appspot.com 버킷을 사용 (.firebasestorage.app은 접근 불가)
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET ?? `${projectId}.appspot.com`
 
   try {
     const buffer = Buffer.from(base64, 'base64')
