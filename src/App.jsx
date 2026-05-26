@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AdminProvider } from './context/AdminContext'
@@ -18,19 +18,13 @@ import { useBroadcast } from './hooks/useBroadcast'
 import './App.css'
 
 function AppInner() {
-  const { user, loading } = useAuth()
-  const { permission, enable } = useNotification(user?.uid ?? null)
+  const { user, loading, signOut } = useAuth()
+  const { permission, enable } = useNotification(user ?? null)
   const { banner, dismiss } = useBroadcast()
   const exitingRef = useRef(false)
 
-  // 비로그인으로 계속하기를 선택했는지 (세션 유지)
-  const [skipped, setSkipped] = useState(
-    () => sessionStorage.getItem('login_skipped') === 'true'
-  )
-
-  const handleSkip = () => {
-    sessionStorage.setItem('login_skipped', 'true')
-    setSkipped(true)
+  const handleSignOut = async () => {
+    await signOut()
   }
 
   useEffect(() => {
@@ -48,14 +42,13 @@ function AppInner() {
   // 로딩 중
   if (loading) return null
 
-  // 비로그인이고 스킵도 안 했으면 로그인 페이지
-  if (!user && !skipped) {
-    return <LoginPage onSkip={handleSkip} />
+  if (!user) {
+    return <LoginPage />
   }
 
   return (
     <BrowserRouter>
-      <Navbar notifPermission={permission} onEnableNotif={enable} />
+      <Navbar notifPermission={permission} onEnableNotif={enable} onSignOut={handleSignOut} />
       <BroadcastBanner banner={banner} onDismiss={dismiss} />
       <div className="nav-pt">
         <Routes>

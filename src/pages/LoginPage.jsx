@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import './LoginPage.css'
 
-export default function LoginPage({ onSkip }) {
+export default function LoginPage() {
   const { signIn } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -61,24 +61,6 @@ export default function LoginPage({ onSkip }) {
         </button>
 
         {error && <p className="login-error">{error}</p>}
-
-        {/* 구분 */}
-        <div className="login-or">
-          <span className="login-or-line" />
-          <span className="login-or-text">또는</span>
-          <span className="login-or-line" />
-        </div>
-
-        {/* 비로그인 계속하기 */}
-        <button className="login-skip-btn" onClick={onSkip}>
-          로그인 없이 계속하기
-        </button>
-
-        {/* 계도기간 안내 */}
-        <div className="login-notice">
-          <span className="login-notice-badge">계도 기간</span>
-          5월 25일부터 로그인이 필요합니다
-        </div>
       </div>
     </div>
   )

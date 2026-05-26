@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAdmin } from '../context/AdminContext'
 
@@ -11,17 +11,36 @@ export default function AdminPage() {
   const [sent, setSent] = useState(false)
   const [history, setHistory] = useState([])
 
-  // 발송 이력 불러오기
+  // 개인 발송
+  const [tokenUsers, setTokenUsers] = useState([])
+  const [selectedUid, setSelectedUid] = useState(null)
+  const [indivTitle, setIndivTitle] = useState('')
+  const [indivBody, setIndivBody] = useState('')
+  const [indivSending, setIndivSending] = useState(false)
+  const [indivSent, setIndivSent] = useState(false)
+
+  // 발송 이력
   useEffect(() => {
-    const q = query(
-      collection(db, 'admin_broadcasts'),
-      orderBy('sentAt', 'desc'),
-      limit(20)
-    )
+    const q = query(collection(db, 'admin_broadcasts'), orderBy('sentAt', 'desc'), limit(20))
     return onSnapshot(q, snap => {
       setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
   }, [])
+
+  // 토큰 보유 유저 목록 로드
+  useEffect(() => {
+    if (!adminMode) return
+    getDocs(collection(db, 'bankroll_fcm_tokens')).then(snap => {
+      const byUid = {}
+      snap.docs.forEach(d => {
+        const { uid, displayName, email } = d.data()
+        if (!uid) return
+        if (!byUid[uid]) byUid[uid] = { uid, displayName, email, count: 0 }
+        byUid[uid].count++
+      })
+      setTokenUsers(Object.values(byUid))
+    })
+  }, [adminMode])
 
   if (!adminMode) {
     return (
@@ -37,7 +56,6 @@ export default function AdminPage() {
     if (!title.trim() || !body.trim()) return
     setSending(true)
     try {
-      // FCM 푸시 발송 (앱 닫혀있어도 수신)
       const res = await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +63,6 @@ export default function AdminPage() {
       })
       const data = await res.json()
 
-      // Firestore에 이력 저장
       await addDoc(collection(db, 'admin_broadcasts'), {
         title: title.trim(),
         body: body.trim(),
@@ -65,80 +82,145 @@ export default function AdminPage() {
     }
   }
 
+  const handleIndivSend = async () => {
+    if (!selectedUid || !indivTitle.trim() || !indivBody.trim()) return
+    setIndivSending(true)
+    try {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: indivTitle.trim(), body: indivBody.trim(), targetUid: selectedUid }),
+      })
+      const data = await res.json()
+      setIndivSent(data.sent ?? 0)
+      setIndivTitle('')
+      setIndivBody('')
+      setTimeout(() => setIndivSent(false), 3000)
+    } catch (e) {
+      alert('발송 실패: ' + e.message)
+    } finally {
+      setIndivSending(false)
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-title">📢 알림 발송</div>
 
-      {/* 작성 카드 */}
+      {/* 전체 발송 */}
       <div className="card">
+        <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.75rem', letterSpacing: '0.5px' }}>
+          전체 유저 발송
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div>
-            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>
-              알림 제목
-            </label>
-            <input
-              className="input"
-              placeholder="제목을 입력하세요"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              maxLength={60}
-            />
+            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>알림 제목</label>
+            <input className="input" placeholder="제목을 입력하세요" value={title} onChange={e => setTitle(e.target.value)} maxLength={60} />
           </div>
           <div>
-            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>
-              알림 내용
-            </label>
+            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>알림 내용</label>
             <textarea
               className="input"
               placeholder="내용을 입력하세요"
               value={body}
               onChange={e => setBody(e.target.value)}
-              rows={4}
+              rows={3}
               maxLength={200}
               style={{ resize: 'vertical', fontFamily: 'inherit' }}
             />
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>
-              {body.length}/200
-            </div>
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{body.length}/200</div>
           </div>
-
-          <button
-            className="btn btn-primary"
-            onClick={handleSend}
-            disabled={sending || !title.trim() || !body.trim()}
-            style={{ width: '100%' }}
-          >
+          <button className="btn btn-primary" onClick={handleSend} disabled={sending || !title.trim() || !body.trim()} style={{ width: '100%' }}>
             {sent !== false ? `✓ ${sent}명에게 발송 완료` : sending ? '발송 중…' : '📢 전체 유저에게 발송'}
           </button>
-
-          <div style={{ fontSize: '0.75rem', color: '#475569', textAlign: 'center' }}>
-            알림을 허용한 모든 유저에게 푸시 알림이 전송됩니다.
-          </div>
         </div>
+      </div>
+
+      {/* 개인 발송 */}
+      <div className="card" style={{ marginTop: '0.75rem' }}>
+        <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.75rem', letterSpacing: '0.5px' }}>
+          개인 발송
+        </div>
+
+        {/* 유저 선택 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          {tokenUsers.length === 0 ? (
+            <div style={{ color: '#475569', fontSize: '0.82rem' }}>알림 허용한 유저가 없습니다.</div>
+          ) : tokenUsers.map(u => (
+            <button
+              key={u.uid}
+              onClick={() => setSelectedUid(selectedUid === u.uid ? null : u.uid)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.6rem 0.875rem',
+                borderRadius: '10px',
+                border: `1px solid ${selectedUid === u.uid ? '#f59e0b' : 'rgba(255,255,255,0.08)'}`,
+                background: selectedUid === u.uid ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0' }}>
+                  {u.displayName ?? '이름 없음'}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>{u.email ?? u.uid}</div>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#475569' }}>토큰 {u.count}개</div>
+            </button>
+          ))}
+        </div>
+
+        {selectedUid && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>알림 제목</label>
+              <input className="input" placeholder="제목을 입력하세요" value={indivTitle} onChange={e => setIndivTitle(e.target.value)} maxLength={60} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>알림 내용</label>
+              <textarea
+                className="input"
+                placeholder="내용을 입력하세요"
+                value={indivBody}
+                onChange={e => setIndivBody(e.target.value)}
+                rows={3}
+                maxLength={200}
+                style={{ resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              <div style={{ textAlign: 'right', fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{indivBody.length}/200</div>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={handleIndivSend}
+              disabled={indivSending || !indivTitle.trim() || !indivBody.trim()}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}
+            >
+              {indivSent !== false
+                ? `✓ ${indivSent}개 기기에 발송 완료`
+                : indivSending ? '발송 중…'
+                : `📩 ${tokenUsers.find(u => u.uid === selectedUid)?.displayName ?? '선택된 유저'}에게 발송`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 발송 이력 */}
       {history.length > 0 && (
         <>
-          <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem' }}>
-            발송 이력
-          </div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, margin: '1rem 0 0.5rem' }}>발송 이력</div>
           {history.map(item => (
             <div key={item.id} className="card" style={{ padding: '0.875rem', marginBottom: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                    {item.title}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.5 }}>
-                    {item.body}
-                  </div>
+                  <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{item.title}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.5 }}>{item.body}</div>
                 </div>
                 <div style={{ fontSize: '0.7rem', color: '#475569', flexShrink: 0, textAlign: 'right' }}>
                   <div style={{ whiteSpace: 'nowrap' }}>
                     {item.sentAt ? new Date(item.sentAt).toLocaleString('ko-KR', {
-                      month: 'numeric', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
+                      month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
                     }) : '—'}
                   </div>
                   {item.sentCount != null && (

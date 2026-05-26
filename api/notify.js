@@ -13,17 +13,26 @@ if (!admin.apps.length) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { title, body } = req.body ?? {}
+  const { title, body, targetUid } = req.body ?? {}
   if (!title) return res.status(400).json({ error: 'title required' })
 
   try {
     const db = admin.firestore()
     const snap = await db.collection('bankroll_fcm_tokens').get()
-    const tokens = snap.docs.map(d => d.id).filter(Boolean)
 
-    console.log(`[notify] tokens: ${tokens.length}, title: ${title}`)
+    let tokens
+    if (targetUid) {
+      tokens = snap.docs
+        .filter(d => d.data().uid === targetUid)
+        .map(d => d.id)
+        .filter(Boolean)
+    } else {
+      tokens = snap.docs.map(d => d.id).filter(Boolean)
+    }
 
-    if (tokens.length === 0) return res.json({ sent: 0, tokens: 0 })
+    console.log(`[notify] target: ${targetUid ?? 'all'}, tokens: ${tokens.length}, title: ${title}`)
+
+    if (tokens.length === 0) return res.json({ sent: 0, total: 0 })
 
     const result = await admin.messaging().sendEachForMulticast({
       tokens,
