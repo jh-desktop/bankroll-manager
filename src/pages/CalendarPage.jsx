@@ -74,7 +74,7 @@ export default function CalendarPage() {
     fetch('/api/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body }),
+      body: JSON.stringify({ title, body, wsId }),
     }).catch(() => {})
   }
 

@@ -13,11 +13,18 @@ if (!admin.apps.length) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { title, body, targetUid } = req.body ?? {}
+  const { title, body, targetUid, wsId } = req.body ?? {}
   if (!title) return res.status(400).json({ error: 'title required' })
 
   try {
     const db = admin.firestore()
+
+    let allowedUids = null
+    if (wsId) {
+      const membersSnap = await db.collection('workspaces').doc(wsId).collection('members').get()
+      allowedUids = new Set(membersSnap.docs.map(d => d.id))
+    }
+
     const snap = await db.collection('bankroll_fcm_tokens').get()
 
     let tokens
@@ -26,11 +33,16 @@ export default async function handler(req, res) {
         .filter(d => d.data().uid === targetUid)
         .map(d => d.id)
         .filter(Boolean)
+    } else if (allowedUids) {
+      tokens = snap.docs
+        .filter(d => allowedUids.has(d.data().uid))
+        .map(d => d.id)
+        .filter(Boolean)
     } else {
       tokens = snap.docs.map(d => d.id).filter(Boolean)
     }
 
-    console.log(`[notify] target: ${targetUid ?? 'all'}, tokens: ${tokens.length}, title: ${title}`)
+    console.log(`[notify] ws: ${wsId ?? 'global'}, target: ${targetUid ?? 'all'}, tokens: ${tokens.length}, title: ${title}`)
 
     if (tokens.length === 0) return res.json({ sent: 0, total: 0 })
 
