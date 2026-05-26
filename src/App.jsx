@@ -26,15 +26,31 @@ function AppInner() {
   const { banner, dismiss } = useBroadcast()
   const exitingRef = useRef(false)
 
-  const handleSignOut = async () => {
-    localStorage.removeItem('lastWorkspaceId')
-    await signOut()
-  }
+  // refs로 최신 값 유지 (popstate 핸들러가 클로저 문제 없이 참조)
+  const currentWsRef = useRef(currentWs)
+  const goHomeRef    = useRef(goHome)
+  useEffect(() => { currentWsRef.current = currentWs }, [currentWs])
+  useEffect(() => { goHomeRef.current    = goHome    }, [goHome])
 
+  // 워크스페이스 진입 시 히스토리 스택 추가 → 백버튼이 WorkspaceHome으로 돌아올 수 있게
+  useEffect(() => {
+    if (currentWs) {
+      window.history.pushState(null, '')
+    }
+  }, [currentWs?.id])
+
+  // 안드로이드 백버튼 처리 (stable - refs 사용)
   useEffect(() => {
     window.history.pushState(null, '')
     const handlePopState = () => {
       if (exitingRef.current) { window.history.back(); return }
+      if (currentWsRef.current) {
+        // 워크스페이스 안 → WorkspaceHome으로
+        goHomeRef.current()
+        window.history.pushState(null, '')
+        return
+      }
+      // WorkspaceHome에서 → 앱 종료 확인
       const exit = window.confirm('앱을 종료하시겠습니까?')
       if (!exit) { window.history.pushState(null, '') }
       else { exitingRef.current = true; window.history.back() }
@@ -42,6 +58,11 @@ function AppInner() {
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
+  const handleSignOut = async () => {
+    localStorage.removeItem('lastWorkspaceId')
+    await signOut()
+  }
 
   if (authLoading || wsLoading) return null
   if (!user) return <LoginPage />

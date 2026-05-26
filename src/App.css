@@ -1,20 +1,20 @@
 /* ── 디자인 토큰 ── */
 :root {
-  --bg:         #07090f;
-  --surface:    #0b0f1a;
-  --card:       #0f1522;
-  --card-hi:    #141d2e;
-  --border:     rgba(148, 170, 210, 0.1);
-  --border-hi:  rgba(148, 170, 210, 0.2);
-  --text-1:     #e8edf8;
-  --text-2:     #8899b5;
-  --text-3:     #4a5f77;
-  --accent:     #3d7eff;
-  --accent-lo:  rgba(61, 126, 255, 0.15);
+  --bg:         #080d18;
+  --surface:    #0d1525;
+  --card:       #131f32;
+  --card-hi:    #1b2a40;
+  --border:     rgba(255, 255, 255, 0.13);
+  --border-hi:  rgba(255, 255, 255, 0.26);
+  --text-1:     #ddeaf8;
+  --text-2:     #8aacc8;
+  --text-3:     #4e6e87;
+  --accent:     #4a8eff;
+  --accent-lo:  rgba(74, 142, 255, 0.18);
   --profit:     #34d399;
-  --profit-lo:  rgba(52, 211, 153, 0.12);
+  --profit-lo:  rgba(52, 211, 153, 0.15);
   --loss:       #f87171;
-  --loss-lo:    rgba(248, 113, 113, 0.12);
+  --loss-lo:    rgba(248, 113, 113, 0.15);
   --radius:     0.75rem;
   --radius-sm:  0.5rem;
 }
@@ -37,7 +37,7 @@ body {
   padding: 1.25rem;
   margin-bottom: 0.875rem;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .input {
@@ -215,7 +215,7 @@ body {
 
 .cal-cell {
   background: var(--card);
-  border: 1px solid rgba(148,170,210,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-sm);
   min-height: 58px;
   padding: 0.3rem;
