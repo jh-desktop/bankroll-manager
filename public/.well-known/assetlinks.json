@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.davao.bankroll",
+    "sha256_cert_fingerprints": ["88:70:2E:24:88:8D:04:34:92:B9:B8:B5:D6:53:50:E8:62:8D:54:A6:CF:2C:43:D2:E9:6C:21:02:31:BC:FC:0D"]
+  }
+}]
