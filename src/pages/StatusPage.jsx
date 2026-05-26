@@ -35,8 +35,10 @@ export default function StatusPage() {
 
   useEffect(() => {
     if (!wsId) return
-    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
-    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    const q = query(collection(db, 'workspaces', wsId, 'members'), orderBy('joinedAt', 'asc'))
+    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({
+      id: d.id, name: d.data().displayName, ...d.data(),
+    }))))
   }, [wsId])
 
   useEffect(() => {

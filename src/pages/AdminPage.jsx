@@ -107,20 +107,20 @@ export default function AdminPage() {
     if (!wsId) { alert('워크스페이스를 선택해주세요'); return }
     setExporting(true)
     try {
-      const [playersSnap, recordsSnap, historySnap] = await Promise.all([
-        getDocs(collection(db, 'workspaces', wsId, 'players')),
+      const [membersSnap, recordsSnap, historySnap] = await Promise.all([
+        getDocs(collection(db, 'workspaces', wsId, 'members')),
         getDocs(collection(db, 'workspaces', wsId, 'records')),
         getDocs(collection(db, 'workspaces', wsId, 'history')),
       ])
 
       const wb = XLSX.utils.book_new()
 
-      // 플레이어 시트
-      const playersData = playersSnap.docs
-        .map(d => d.data())
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map(p => ({ '이름': p.name, '순서': p.order ?? 0 }))
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(playersData), '플레이어')
+      // 멤버 시트
+      const playersData = membersSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.joinedAt?.seconds ?? 0) - (b.joinedAt?.seconds ?? 0))
+        .map(m => ({ '이름': m.displayName, '이메일': m.email ?? '', '역할': m.role === 'owner' ? '방장' : '멤버' }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(playersData), '멤버')
 
       // 기록 시트
       const recordsData = recordsSnap.docs

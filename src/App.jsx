@@ -10,7 +10,6 @@ import OnboardingPage from './pages/OnboardingPage'
 import WorkspaceHome from './pages/WorkspaceHome'
 import CalendarPage from './pages/CalendarPage'
 import StatusPage from './pages/StatusPage'
-import UsersPage from './pages/UsersPage'
 import HistoryPage from './pages/HistoryPage'
 import StatsPage from './pages/StatsPage'
 import AdminPage from './pages/AdminPage'
@@ -58,7 +57,6 @@ function AppInner() {
             <Routes>
               <Route path="/"          element={<CalendarPage />} />
               <Route path="/status"    element={<StatusPage />} />
-              <Route path="/users"     element={<UsersPage />} />
               <Route path="/history"   element={<HistoryPage />} />
               <Route path="/stats"     element={<StatsPage />} />
               <Route path="/admin"     element={<AdminPage />} />

@@ -36,8 +36,10 @@ export default function CalendarPage() {
 
   useEffect(() => {
     if (!wsId) return
-    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
-    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    const q = query(collection(db, 'workspaces', wsId, 'members'), orderBy('joinedAt', 'asc'))
+    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({
+      id: d.id, name: d.data().displayName, ...d.data(),
+    }))))
   }, [wsId])
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function CalendarPage() {
       })
       setRecords(map)
     })
-  }, [year, month])
+  }, [wsId, year, month])
 
   const prevMonth = () => { if (month === 1) { setYear(y => y-1); setMonth(12) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setYear(y => y+1); setMonth(1) } else setMonth(m => m+1) }
@@ -200,7 +202,7 @@ export default function CalendarPage() {
           </div>
 
           {users.length === 0 && (
-            <div className="empty-state" style={{ padding: '1rem' }}>사용자를 먼저 추가해주세요.</div>
+            <div className="empty-state" style={{ padding: '1rem' }}>워크스페이스 멤버가 없습니다.</div>
           )}
 
           {users.map(user => {

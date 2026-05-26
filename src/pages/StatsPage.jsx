@@ -61,9 +61,9 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!wsId) return
-    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
+    const q = query(collection(db, 'workspaces', wsId, 'members'), orderBy('joinedAt', 'asc'))
     return onSnapshot(q, snap => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      const list = snap.docs.map(d => ({ id: d.id, name: d.data().displayName, ...d.data() }))
       setUsers(list)
       setSelectedUser(null)
       if (list.length > 0) setSelectedUser(list[0].id)

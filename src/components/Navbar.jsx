@@ -11,7 +11,6 @@ const links = [
   { path: '/board',  label: '게시판' },
 ]
 const adminLinks = [
-  { path: '/users',   label: '사용자' },
   { path: '/history', label: '이력' },
   { path: '/admin',   label: '📢 알림' },
 ]
