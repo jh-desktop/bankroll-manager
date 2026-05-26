@@ -69,19 +69,9 @@ export function WorkspaceProvider({ children }) {
     if (updated) setCurrentWs(updated)
   }, [workspaces])
 
-  // Restore last selected workspace when workspaces load
-  useEffect(() => {
-    if (workspaces.length === 0 || currentWs) return
-    const lastId = localStorage.getItem('lastWorkspaceId')
-    if (lastId) {
-      const ws = workspaces.find(w => w.id === lastId)
-      if (ws) setCurrentWs(ws)
-    }
-  }, [workspaces])
 
   const selectWorkspace = useCallback(ws => {
     setCurrentWs(ws)
-    localStorage.setItem('lastWorkspaceId', ws.id)
   }, [])
 
   const goHome = useCallback(() => setCurrentWs(null), [])

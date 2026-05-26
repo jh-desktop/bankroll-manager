@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AdminProvider } from './context/AdminContext'
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext'
@@ -60,7 +60,6 @@ function AppInner() {
   }, [])
 
   const handleSignOut = async () => {
-    localStorage.removeItem('lastWorkspaceId')
     await signOut()
   }
 
@@ -69,7 +68,7 @@ function AppInner() {
   if (isNewUser) return <OnboardingPage />
 
   return (
-    <BrowserRouter>
+    <MemoryRouter>
       {currentWs ? (
         <>
           <Navbar notifPermission={permission} onEnableNotif={enable} onSignOut={handleSignOut} onGoHome={goHome} />
@@ -93,7 +92,7 @@ function AppInner() {
           onEnableNotif={enable}
         />
       )}
-    </BrowserRouter>
+    </MemoryRouter>
   )
 }
 
