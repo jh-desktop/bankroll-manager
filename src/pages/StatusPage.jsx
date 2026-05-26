@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useWorkspace } from '../context/WorkspaceContext'
 
 const fmt = (n) => {
   const abs = Math.abs(n).toLocaleString('ko-KR')
@@ -23,6 +24,8 @@ const groupByDate = (entries) => {
 }
 
 export default function StatusPage() {
+  const { currentWs } = useWorkspace()
+  const wsId = currentWs?.id
   const [users, setUsers] = useState([])
   const [records, setRecords] = useState([])
   const [from, setFrom] = useState(firstOfMonth())
@@ -31,15 +34,17 @@ export default function StatusPage() {
   const [expanded, setExpanded] = useState({})
 
   useEffect(() => {
-    const q = query(collection(db, 'bankroll_users'), orderBy('order', 'asc'))
+    if (!wsId) return
+    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
     return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-  }, [])
+  }, [wsId])
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'bankroll_records'), snap =>
+    if (!wsId) return
+    return onSnapshot(collection(db, 'workspaces', wsId, 'records'), snap =>
       setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-  }, [])
+  }, [wsId])
 
   const toggleExpand = (uid) => setExpanded(p => ({ ...p, [uid]: !p[uid] }))
 

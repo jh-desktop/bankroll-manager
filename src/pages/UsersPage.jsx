@@ -5,30 +5,34 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAdmin } from '../context/AdminContext'
+import { useWorkspace } from '../context/WorkspaceContext'
 
 export default function UsersPage() {
   const { adminMode, openModal } = useAdmin()
+  const { currentWs } = useWorkspace()
+  const wsId = currentWs?.id
   const [users, setUsers] = useState([])
   const [name, setName] = useState('')
 
   useEffect(() => {
-    const q = query(collection(db, 'bankroll_users'), orderBy('order', 'asc'))
+    if (!wsId) return
+    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
     return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-  }, [])
+  }, [wsId])
 
   const addUser = async () => {
     const n = name.trim()
-    if (!n || !adminMode) return
-    await addDoc(collection(db, 'bankroll_users'), {
+    if (!n || !adminMode || !wsId) return
+    await addDoc(collection(db, 'workspaces', wsId, 'players'), {
       name: n, order: users.length, createdAt: serverTimestamp(),
     })
     setName('')
   }
 
   const deleteUser = async (id, uname) => {
-    if (!adminMode) return
+    if (!adminMode || !wsId) return
     if (!confirm(`"${uname}" 사용자를 삭제하시겠습니까?\n해당 사용자의 기록도 함께 삭제하세요.`)) return
-    await deleteDoc(doc(db, 'bankroll_users', id))
+    await deleteDoc(doc(db, 'workspaces', wsId, 'players', id))
   }
 
   if (!adminMode) {

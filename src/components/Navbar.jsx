@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAdmin } from '../context/AdminContext'
 import { useAuth } from '../context/AuthContext'
+import { useWorkspace } from '../context/WorkspaceContext'
 
 const links = [
   { path: '/',       label: '달력' },
@@ -9,19 +10,19 @@ const links = [
   { path: '/stats',  label: '그래프' },
   { path: '/board',  label: '게시판' },
 ]
-
 const adminLinks = [
-  { path: '/users',  label: '사용자' },
-  { path: '/history',label: '이력' },
-  { path: '/admin',  label: '📢 알림' },
+  { path: '/users',   label: '사용자' },
+  { path: '/history', label: '이력' },
+  { path: '/admin',   label: '📢 알림' },
 ]
 
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone = window.navigator.standalone === true
 
-export default function Navbar({ notifPermission, onEnableNotif }) {
+export default function Navbar({ notifPermission, onEnableNotif, onSignOut, onGoHome }) {
   const { adminMode, openModal, exitAdmin, showModal, closeModal, input, setInput, err, setErr, confirm } = useAdmin()
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
+  const { currentWs } = useWorkspace()
   const [showIosGuide, setShowIosGuide] = useState(false)
   const [enabling, setEnabling] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -38,7 +39,14 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
   return (
     <>
       <nav className="navbar">
-        <span className="nav-brand">💰 뱅크롤</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+          <button onClick={onGoHome} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: '0.9rem', padding: '2px 4px', flexShrink: 0 }} title="워크스페이스 홈">
+            ←
+          </button>
+          <span className="nav-brand" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '130px', fontSize: '0.9rem' }} title={currentWs?.name}>
+            {currentWs?.type === 'personal' ? '👤' : '👥'} {currentWs?.name ?? '뱅크롤'}
+          </span>
+        </div>
         <div className="nav-links">
           {links.map(l => (
             <NavLink key={l.path} to={l.path} end={l.path === '/'}
@@ -69,7 +77,7 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
           {user && (
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowUserMenu(p => !p)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: '0.5rem' }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px 6px', borderRadius: '0.5rem' }}>
                 {user.photoURL
                   ? <img src={user.photoURL} alt="" style={{ width: 26, height: 26, borderRadius: '50%', border: '1.5px solid #00e5a0' }} />
                   : <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#1e3a5f', border: '1.5px solid #00e5a0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#93c5fd' }}>
@@ -84,7 +92,7 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
                     <div style={{ fontSize: '0.82rem', color: '#e2e8f0', fontWeight: 700 }}>{user.displayName}</div>
                     <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: 2 }}>{user.email}</div>
                   </div>
-                  <button onClick={signOut}
+                  <button onClick={onSignOut}
                     style={{ width: '100%', padding: '0.65rem 0.875rem', background: 'none', border: 'none', color: '#f87171', fontSize: '0.82rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
                     로그아웃
                   </button>
@@ -132,7 +140,7 @@ export default function Navbar({ notifPermission, onEnableNotif }) {
       )}
 
       {showUserMenu && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowUserMenu(false)} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setShowUserMenu(false)} />
       )}
     </>
   )

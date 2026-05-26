@@ -4,6 +4,7 @@ import {
   deleteDoc, addDoc, serverTimestamp, orderBy,
 } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useWorkspace } from '../context/WorkspaceContext'
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const fmt = (n) => {
@@ -22,6 +23,8 @@ function getDays(year, month) {
 const COLORS = ['#3b82f6','#a855f7','#f59e0b','#10b981','#ef4444','#ec4899','#06b6d4','#84cc16']
 
 export default function CalendarPage() {
+  const { currentWs } = useWorkspace()
+  const wsId = currentWs?.id
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
@@ -32,13 +35,15 @@ export default function CalendarPage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const q = query(collection(db, 'bankroll_users'), orderBy('order', 'asc'))
+    if (!wsId) return
+    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
     return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-  }, [])
+  }, [wsId])
 
   useEffect(() => {
+    if (!wsId) return
     const q = query(
-      collection(db, 'bankroll_records'),
+      collection(db, 'workspaces', wsId, 'records'),
       where('year', '==', year),
       where('month', '==', month),
     )
@@ -85,13 +90,13 @@ export default function CalendarPage() {
 
     setSaving(true)
     try {
-      const ref = await addDoc(collection(db, 'bankroll_records'), {
+      const ref = await addDoc(collection(db, 'workspaces', wsId, 'records'), {
         userId: user.id, userName: user.name,
         date: selected, year: y, month: m, day: d,
         amount, note,
         createdAt: serverTimestamp(),
       })
-      await addDoc(collection(db, 'bankroll_history'), {
+      await addDoc(collection(db, 'workspaces', wsId, 'history'), {
         recordId: ref.id, userId: user.id, userName: user.name, date: selected,
         action: 'create', before: null, after: { amount, note },
         timestamp: serverTimestamp(),
@@ -107,8 +112,8 @@ export default function CalendarPage() {
   const deleteEntry = useCallback(async (entryId, userId, entry) => {
     if (!confirm('삭제하시겠습니까?')) return
     const user = users.find(u => u.id === userId)
-    await deleteDoc(doc(db, 'bankroll_records', entryId))
-    await addDoc(collection(db, 'bankroll_history'), {
+    await deleteDoc(doc(db, 'workspaces', wsId, 'records', entryId))
+    await addDoc(collection(db, 'workspaces', wsId, 'history'), {
       recordId: entryId, userId, userName: user?.name, date: selected,
       action: 'delete',
       before: { amount: entry.amount, note: entry.note || '' },

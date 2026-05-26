@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useWorkspace } from '../context/WorkspaceContext'
 
 const fmt = (n) => {
   if (n === undefined || n === null) return '-'
@@ -16,6 +17,8 @@ const PAGE_SIZE = 20
 const toDateStr = (d) => d.toISOString().slice(0, 10)
 
 export default function HistoryPage() {
+  const { currentWs } = useWorkspace()
+  const wsId = currentWs?.id
   const [history, setHistory] = useState([])
   const [nameFilter, setNameFilter] = useState('')
   const [recordDate, setRecordDate] = useState('')
@@ -23,11 +26,12 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1)
 
   useEffect(() => {
-    const q = query(collection(db, 'bankroll_history'), orderBy('timestamp', 'desc'))
+    if (!wsId) return
+    const q = query(collection(db, 'workspaces', wsId, 'history'), orderBy('timestamp', 'desc'))
     return onSnapshot(q, snap =>
       setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-  }, [])
+  }, [wsId])
 
   useEffect(() => { setPage(1) }, [nameFilter, recordDate, updateDate])
 

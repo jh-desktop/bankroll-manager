@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useWorkspace } from '../context/WorkspaceContext'
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
@@ -49,6 +50,8 @@ const CustomTooltipBar = ({ active, payload, label }) => {
 }
 
 export default function StatsPage() {
+  const { currentWs } = useWorkspace()
+  const wsId = currentWs?.id
   const [users, setUsers] = useState([])
   const [records, setRecords] = useState([])
   const [from, setFrom] = useState(firstOfMonth())
@@ -57,19 +60,22 @@ export default function StatsPage() {
   const [selectedUser, setSelectedUser] = useState(null)
 
   useEffect(() => {
-    const q = query(collection(db, 'bankroll_users'), orderBy('order', 'asc'))
+    if (!wsId) return
+    const q = query(collection(db, 'workspaces', wsId, 'players'), orderBy('order', 'asc'))
     return onSnapshot(q, snap => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       setUsers(list)
-      if (list.length > 0) setSelectedUser(prev => prev ?? list[0].id)
+      setSelectedUser(null)
+      if (list.length > 0) setSelectedUser(list[0].id)
     })
-  }, [])
+  }, [wsId])
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'bankroll_records'), snap =>
+    if (!wsId) return
+    return onSnapshot(collection(db, 'workspaces', wsId, 'records'), snap =>
       setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-  }, [])
+  }, [wsId])
 
   const filtered = useMemo(() =>
     allTime ? records : records.filter(r => r.date >= from && r.date <= to),
