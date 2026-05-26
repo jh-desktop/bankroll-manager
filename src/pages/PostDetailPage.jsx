@@ -8,9 +8,19 @@ import {
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { useAdmin } from '../context/AdminContext'
+import { useWorkspace } from '../context/WorkspaceContext'
 import './BoardPage.css'
 
+const LEGACY_KEY = 'JN7GFW'
+
 const MAX_IMAGE_MB = 5
+const MAX_IMAGES   = 5
+
+const getImages = (post) => {
+  if (post.imageURLs?.length) return post.imageURLs
+  if (post.imageURL) return [post.imageURL]
+  return []
+}
 
 const toBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader()
@@ -41,6 +51,11 @@ export default function PostDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { adminMode } = useAdmin()
+  const { currentWs } = useWorkspace()
+
+  const postsParts = currentWs?.secretKey === LEGACY_KEY
+    ? ['bankroll_posts']
+    : ['workspaces', currentWs?.id, 'posts']
 
   const [post, setPost]         = useState(null)
   const [loading, setLoading]   = useState(true)
@@ -49,17 +64,18 @@ export default function PostDetailPage() {
   const [submitting, setSubmitting] = useState(false)
 
   // 수정 모드
-  const [editing, setEditing]   = useState(false)
-  const [editTitle, setEditTitle] = useState('')
+  const [editing, setEditing]         = useState(false)
+  const [editTitle, setEditTitle]     = useState('')
   const [editContent, setEditContent] = useState('')
-  const [editImage, setEditImage] = useState(null)
-  const [editPreview, setEditPreview] = useState(null)
+  const [editExisting, setEditExisting] = useState([])  // 기존 URL 배열
+  const [editNewFiles, setEditNewFiles] = useState([])  // 새 File 배열
+  const [editNewPreviews, setEditNewPreviews] = useState([])
   const [editUploading, setEditUploading] = useState(false)
-  const [editProgress, setEditProgress] = useState(0)
+  const [editProgress, setEditProgress]   = useState(0)
   const editFileRef = useRef()
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'bankroll_posts', id), snap => {
+    const unsub = onSnapshot(doc(db, ...postsParts, id), snap => {
       if (!snap.exists()) { navigate('/board'); return }
       setPost({ id: snap.id, ...snap.data() })
       setLoading(false)
@@ -69,12 +85,20 @@ export default function PostDetailPage() {
 
   useEffect(() => {
     const q = query(
-      collection(db, 'bankroll_posts', id, 'comments'),
+      collection(db, ...postsParts, id, 'comments'),
       orderBy('createdAt', 'asc')
     )
-    return onSnapshot(q, snap =>
-      setComments(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
+    return onSnapshot(q, snap => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      setComments(list)
+      // 저장된 카운트와 실제 수가 다르면 동기화
+      setPost(prev => {
+        if (prev && prev.commentCount !== list.length) {
+          updateDoc(doc(db, ...postsParts, id), { commentCount: list.length }).catch(() => {})
+        }
+        return prev
+      })
+    })
   }, [id])
 
   const canEdit   = (item) => adminMode || (user && item.createdBy === user.uid)
@@ -83,7 +107,7 @@ export default function PostDetailPage() {
   // ── 글 삭제 ──
   const deletePost = async () => {
     if (!confirm('이 글을 삭제하시겠습니까?')) return
-    await deleteDoc(doc(db, 'bankroll_posts', id))
+    await deleteDoc(doc(db, ...postsParts, id))
     navigate('/board')
   }
 
@@ -91,9 +115,24 @@ export default function PostDetailPage() {
   const startEdit = () => {
     setEditTitle(post.title)
     setEditContent(post.content)
-    setEditPreview(post.imageURL ?? null)
-    setEditImage(null)
+    setEditExisting(getImages(post))
+    setEditNewFiles([])
+    setEditNewPreviews([])
     setEditing(true)
+  }
+
+  const editTotalCount = editExisting.length + editNewFiles.length
+
+  const handleEditImage = (e) => {
+    const newFiles = Array.from(e.target.files)
+    if (editFileRef.current) editFileRef.current.value = ''
+    const remaining = MAX_IMAGES - editTotalCount
+    if (remaining <= 0) { alert('최대 5장까지 첨부 가능합니다.'); return }
+    const toAdd = newFiles.slice(0, remaining)
+    const oversized = toAdd.filter(f => f.size > MAX_IMAGE_MB * 1024 * 1024)
+    if (oversized.length) { alert(`이미지는 ${MAX_IMAGE_MB}MB 이하만 가능합니다.`); return }
+    setEditNewFiles(prev => [...prev, ...toAdd])
+    setEditNewPreviews(prev => [...prev, ...toAdd.map(f => URL.createObjectURL(f))])
   }
 
   // ── 글 수정 저장 ──
@@ -101,27 +140,25 @@ export default function PostDetailPage() {
     if (!editTitle.trim() || !editContent.trim()) return
     setEditUploading(true)
     try {
-      let imageURL = editPreview  // 기존 이미지 유지 기본값
-      if (editImage) {
-        setEditProgress(20)
-        const compressed = await compressImage(editImage)
-        setEditProgress(40)
-        const base64 = await toBase64(compressed)
-        setEditProgress(70)
-        const res = await fetch('/api/upload', {
+      const imageURLs = [...editExisting]
+      for (let i = 0; i < editNewFiles.length; i++) {
+        setEditProgress(Math.round((i / editNewFiles.length) * 90))
+        const compressed = await compressImage(editNewFiles[i])
+        const base64     = await toBase64(compressed)
+        const res  = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, filename: editImage.name, mimeType: 'image/jpeg' }),
+          body: JSON.stringify({ base64, filename: editNewFiles[i].name, mimeType: 'image/jpeg' }),
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)
-        imageURL = data.url
-        setEditProgress(100)
+        imageURLs.push(data.url)
       }
-      await updateDoc(doc(db, 'bankroll_posts', id), {
+      if (editNewFiles.length) setEditProgress(100)
+      await updateDoc(doc(db, ...postsParts, id), {
         title: editTitle.trim(),
         content: editContent.trim(),
-        imageURL: imageURL ?? null,
+        imageURLs,
         updatedAt: serverTimestamp(),
       })
       setEditing(false)
@@ -137,15 +174,15 @@ export default function PostDetailPage() {
     if (!commentText.trim() || !user) return
     setSubmitting(true)
     try {
-      await addDoc(collection(db, 'bankroll_posts', id, 'comments'), {
+      await addDoc(collection(db, ...postsParts, id, 'comments'), {
         content: commentText.trim(),
         createdBy: user.uid,
         createdByName: user.displayName ?? '익명',
         createdByPhoto: user.photoURL ?? null,
         createdAt: serverTimestamp(),
       })
-      await updateDoc(doc(db, 'bankroll_posts', id), { commentCount: increment(1) })
       setCommentText('')
+      updateDoc(doc(db, ...postsParts, id), { commentCount: increment(1) }).catch(() => {})
     } catch (e) {
       alert('댓글 등록 실패: ' + e.message)
     } finally {
@@ -156,8 +193,8 @@ export default function PostDetailPage() {
   // ── 댓글 삭제 ──
   const deleteComment = async (cmt) => {
     if (!confirm('댓글을 삭제하시겠습니까?')) return
-    await deleteDoc(doc(db, 'bankroll_posts', id, 'comments', cmt.id))
-    await updateDoc(doc(db, 'bankroll_posts', id), { commentCount: increment(-1) })
+    await deleteDoc(doc(db, ...postsParts, id, 'comments', cmt.id))
+    await updateDoc(doc(db, ...postsParts, id), { commentCount: increment(-1) })
   }
 
   const timeAgo = (ts) => {
@@ -191,27 +228,29 @@ export default function PostDetailPage() {
             onChange={e => setEditContent(e.target.value)} rows={8} maxLength={2000} />
 
           <div className="bp-image-area" style={{ marginTop: '0.75rem' }}>
-            {editPreview
-              ? (
-                <div className="bp-image-preview">
-                  <img src={editPreview} alt="" />
-                  <button className="bp-image-remove" onClick={() => { setEditImage(null); setEditPreview(null) }}>✕</button>
+            <div className="bp-image-list">
+              {editExisting.map((url, i) => (
+                <div key={`ex-${i}`} className="bp-image-preview">
+                  <img src={url} alt="" />
+                  <button className="bp-image-remove" onClick={() => setEditExisting(prev => prev.filter((_, idx) => idx !== i))}>✕</button>
                 </div>
-              )
-              : (
-                <label className="bp-image-upload-btn">
-                  <input type="file" accept="image/*" ref={editFileRef}
-                    onChange={e => {
-                      const f = e.target.files[0]
-                      if (!f) return
-                      if (f.size > MAX_IMAGE_MB * 1024 * 1024) { alert('5MB 이하만 가능합니다'); return }
-                      setEditImage(f); setEditPreview(URL.createObjectURL(f))
-                    }}
-                    style={{ display: 'none' }} />
-                  📷 사진 교체
-                </label>
-              )
-            }
+              ))}
+              {editNewPreviews.map((src, i) => (
+                <div key={`new-${i}`} className="bp-image-preview">
+                  <img src={src} alt="" />
+                  <button className="bp-image-remove" onClick={() => {
+                    setEditNewFiles(prev => prev.filter((_, idx) => idx !== i))
+                    setEditNewPreviews(prev => prev.filter((_, idx) => idx !== i))
+                  }}>✕</button>
+                </div>
+              ))}
+            </div>
+            {editTotalCount < MAX_IMAGES && (
+              <label className="bp-image-upload-btn" style={{ marginTop: editTotalCount ? '0.5rem' : 0 }}>
+                <input type="file" accept="image/*" multiple ref={editFileRef} onChange={handleEditImage} style={{ display: 'none' }} />
+                📷 사진 추가 <span style={{ fontSize: '0.7rem', color: '#475569' }}>({editTotalCount}/{MAX_IMAGES})</span>
+              </label>
+            )}
           </div>
 
           {editUploading && (
@@ -243,11 +282,15 @@ export default function PostDetailPage() {
             <span className="bp-meta-info">{timeAgo(post.createdAt)}</span>
           </div>
 
-          {post.imageURL && (
-            <div className="bp-post-image">
-              <img src={post.imageURL} alt="" />
+          {getImages(post).map((url, i) => (
+            <div key={i} className="bp-post-image" style={{ position: 'relative' }}>
+              <img src={url} alt="" />
+              <a href={url} download target="_blank" rel="noreferrer"
+                style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '0.5rem', color: '#e2e8f0', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', textDecoration: 'none' }}>
+                ⬇ 저장
+              </a>
             </div>
-          )}
+          ))}
 
           <div className="bp-post-content">{post.content}</div>
 

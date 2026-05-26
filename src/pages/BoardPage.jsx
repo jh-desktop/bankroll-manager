@@ -7,9 +7,13 @@ import {
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { useAdmin } from '../context/AdminContext'
+import { useWorkspace } from '../context/WorkspaceContext'
 import './BoardPage.css'
 
 const MAX_IMAGE_MB = 5
+const MAX_IMAGES   = 5
+
+const LEGACY_KEY = 'JN7GFW'
 
 const toBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader()
@@ -18,7 +22,6 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
-// 최대 1200px, JPEG 80% 품질로 압축 → base64 기준 ~300KB 이내
 const compressImage = (file) => new Promise((resolve) => {
   const img = new Image()
   img.onload = () => {
@@ -36,72 +39,89 @@ const compressImage = (file) => new Promise((resolve) => {
   img.src = URL.createObjectURL(file)
 })
 
+const getImages = (post) => {
+  if (post.imageURLs?.length) return post.imageURLs
+  if (post.imageURL) return [post.imageURL]
+  return []
+}
+
 export default function BoardPage() {
   const { user } = useAuth()
   const { adminMode } = useAdmin()
+  const { currentWs } = useWorkspace()
   const navigate = useNavigate()
 
-  const [posts, setPosts]       = useState([])
+  // JN7GFW 방은 기존 전역 컬렉션 유지, 나머지는 워크스페이스별
+  const postsParts = currentWs?.secretKey === LEGACY_KEY
+    ? ['bankroll_posts']
+    : ['workspaces', currentWs?.id, 'posts']
+
+  const [posts, setPosts]         = useState([])
   const [showWrite, setShowWrite] = useState(false)
-  const [title, setTitle]       = useState('')
-  const [content, setContent]   = useState('')
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
-  const [uploading, setUploading] = useState(false)
+  const [title, setTitle]         = useState('')
+  const [content, setContent]     = useState('')
+  const [imageFiles, setImageFiles]         = useState([])
+  const [imagePreviews, setImagePreviews]   = useState([])
+  const [uploading, setUploading]           = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const fileRef = useRef()
 
   useEffect(() => {
-    const q = query(collection(db, 'bankroll_posts'), orderBy('createdAt', 'desc'))
+    if (!currentWs?.id) return
+    const q = query(collection(db, ...postsParts), orderBy('createdAt', 'desc'))
     return onSnapshot(q, snap =>
       setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-  }, [])
+  }, [currentWs?.id])
 
   const handleImage = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
-      alert(`이미지는 ${MAX_IMAGE_MB}MB 이하만 업로드 가능합니다.`)
-      return
-    }
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
+    const newFiles = Array.from(e.target.files)
+    if (fileRef.current) fileRef.current.value = ''
+    const remaining = MAX_IMAGES - imageFiles.length
+    if (remaining <= 0) { alert('최대 5장까지 첨부 가능합니다.'); return }
+    const toAdd = newFiles.slice(0, remaining)
+    const oversized = toAdd.filter(f => f.size > MAX_IMAGE_MB * 1024 * 1024)
+    if (oversized.length) { alert(`이미지는 ${MAX_IMAGE_MB}MB 이하만 가능합니다.`); return }
+    setImageFiles(prev => [...prev, ...toAdd])
+    setImagePreviews(prev => [...prev, ...toAdd.map(f => URL.createObjectURL(f))])
+  }
+
+  const removeImage = (i) => {
+    setImageFiles(prev => prev.filter((_, idx) => idx !== i))
+    setImagePreviews(prev => prev.filter((_, idx) => idx !== i))
   }
 
   const resetForm = () => {
-    setTitle(''); setContent(''); setImageFile(null)
-    setImagePreview(null); setShowWrite(false)
-    setUploadProgress(0)
+    setTitle(''); setContent('')
+    setImageFiles([]); setImagePreviews([])
+    setShowWrite(false); setUploadProgress(0)
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) return
-    if (!user) return
+    if (!title.trim() || !content.trim() || !user) return
     setUploading(true)
     try {
-      let imageURL = null
-      if (imageFile) {
-        setUploadProgress(20)
-        const compressed = await compressImage(imageFile)
-        setUploadProgress(40)
-        const base64 = await toBase64(compressed)
-        setUploadProgress(70)
-        const res = await fetch('/api/upload', {
+      const imageURLs = []
+      for (let i = 0; i < imageFiles.length; i++) {
+        setUploadProgress(Math.round((i / imageFiles.length) * 90))
+        const compressed = await compressImage(imageFiles[i])
+        const base64     = await toBase64(compressed)
+        const res  = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, filename: imageFile.name, mimeType: 'image/jpeg' }),
+          body: JSON.stringify({ base64, filename: imageFiles[i].name, mimeType: 'image/jpeg' }),
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)
-        imageURL = data.url
-        setUploadProgress(100)
+        imageURLs.push(data.url)
       }
-      await addDoc(collection(db, 'bankroll_posts'), {
+      if (imageFiles.length) setUploadProgress(100)
+
+      await addDoc(collection(db, ...postsParts), {
         title: title.trim(),
         content: content.trim(),
-        imageURL,
+        imageURLs,
         createdBy: user.uid,
         createdByName: user.displayName ?? '익명',
         createdByPhoto: user.photoURL ?? null,
@@ -120,7 +140,7 @@ export default function BoardPage() {
   const handleDelete = async (e, post) => {
     e.stopPropagation()
     if (!confirm(`"${post.title}" 글을 삭제하시겠습니까?`)) return
-    await deleteDoc(doc(db, 'bankroll_posts', post.id))
+    await deleteDoc(doc(db, ...postsParts, post.id))
   }
 
   const canDelete = (post) => adminMode || (user && post.createdBy === user.uid)
@@ -136,20 +156,22 @@ export default function BoardPage() {
 
   return (
     <div className="page">
-      {/* 헤더 */}
       <div className="bp-header">
-        <h2 className="page-title" style={{ margin: 0 }}>게시판</h2>
-        {user && (
-          <button className="btn btn-primary bp-write-btn" onClick={() => setShowWrite(true)}>
-            + 글쓰기
-          </button>
-        )}
-        {!user && (
-          <span style={{ fontSize: '0.78rem', color: '#475569' }}>로그인 후 글쓰기 가능</span>
-        )}
+        <div className="bp-board-title">
+          <h2>게시판</h2>
+          <span className="bp-board-suits">
+            <span style={{ color: '#e2e8f0' }}>♠</span>
+            <span style={{ color: '#ef4444' }}>♥</span>
+            <span style={{ color: '#3b82f6' }}>♦</span>
+            <span style={{ color: '#10b981' }}>♣</span>
+          </span>
+        </div>
+        {user
+          ? <button className="bp-write-btn" onClick={() => setShowWrite(true)}>+ 글쓰기</button>
+          : <span style={{ fontSize: '0.75rem', color: '#334155' }}>로그인 후 글쓰기 가능</span>
+        }
       </div>
 
-      {/* 글 목록 */}
       {posts.length === 0 && (
         <div className="bp-empty">
           <div style={{ fontSize: '2.5rem', opacity: 0.3 }}>📝</div>
@@ -158,38 +180,50 @@ export default function BoardPage() {
       )}
 
       <div className="bp-list">
-        {posts.map(post => (
-          <div key={post.id} className="bp-card" onClick={() => navigate(`/board/${post.id}`)}>
-            {post.imageURL && (
-              <div className="bp-card-thumb">
-                <img src={post.imageURL} alt="" />
-              </div>
-            )}
-            <div className="bp-card-body">
-              <div className="bp-card-title">{post.title}</div>
-              <div className="bp-card-preview">{post.content}</div>
-              <div className="bp-card-meta">
-                <div className="bp-card-author">
-                  {post.createdByPhoto
-                    ? <img src={post.createdByPhoto} alt="" className="bp-avatar" />
-                    : <div className="bp-avatar-fallback">{post.createdByName?.[0] ?? '?'}</div>
-                  }
-                  <span>{post.createdByName}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span className="bp-meta-info">💬 {post.commentCount ?? 0}</span>
-                  <span className="bp-meta-info">{timeAgo(post.createdAt)}</span>
-                  {canDelete(post) && (
-                    <button className="bp-del-btn" onClick={e => handleDelete(e, post)}>삭제</button>
+        {posts.map(post => {
+          const images = getImages(post)
+          return (
+            <div key={post.id} className="bp-card" onClick={() => navigate(`/board/${post.id}`)}>
+              {images.length > 0 && (
+                <div className={`bp-card-thumb ${images.length >= 2 ? 'bp-card-thumb-multi' : ''}`}>
+                  <div className="bp-thumb-cell">
+                    <img src={images[0]} alt="" />
+                  </div>
+                  {images.length >= 2 && (
+                    <div className="bp-thumb-cell" style={{ position: 'relative' }}>
+                      <img src={images[1]} alt="" />
+                      {images.length > 2 && (
+                        <div className="bp-thumb-more">+{images.length - 1}</div>
+                      )}
+                    </div>
                   )}
+                </div>
+              )}
+              <div className="bp-card-body">
+                <div className="bp-card-title">{post.title}</div>
+                <div className="bp-card-preview">{post.content}</div>
+                <div className="bp-card-meta">
+                  <div className="bp-card-author">
+                    {post.createdByPhoto
+                      ? <img src={post.createdByPhoto} alt="" className="bp-avatar" />
+                      : <div className="bp-avatar-fallback">{post.createdByName?.[0] ?? '?'}</div>
+                    }
+                    <span>{post.createdByName}</span>
+                  </div>
+                  <div className="bp-meta-right">
+                    <span className="bp-chip">💬 {post.commentCount ?? 0}</span>
+                    <span className="bp-meta-time">{timeAgo(post.createdAt)}</span>
+                    {canDelete(post) && (
+                      <button className="bp-del-btn" onClick={e => handleDelete(e, post)}>삭제</button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {/* 글쓰기 모달 */}
       {showWrite && (
         <div className="modal-overlay" onClick={resetForm}>
           <div className="bp-write-modal" onClick={e => e.stopPropagation()}>
@@ -206,22 +240,22 @@ export default function BoardPage() {
               value={content} onChange={e => setContent(e.target.value)}
               rows={6} maxLength={2000} />
 
-            {/* 이미지 업로드 */}
             <div className="bp-image-area">
-              {imagePreview
-                ? (
-                  <div className="bp-image-preview">
-                    <img src={imagePreview} alt="" />
-                    <button className="bp-image-remove" onClick={() => { setImageFile(null); setImagePreview(null); if (fileRef.current) fileRef.current.value = '' }}>✕</button>
+              <div className="bp-image-list">
+                {imagePreviews.map((src, i) => (
+                  <div key={i} className="bp-image-preview">
+                    <img src={src} alt="" />
+                    <button className="bp-image-remove" onClick={() => removeImage(i)}>✕</button>
                   </div>
-                )
-                : (
-                  <label className="bp-image-upload-btn">
-                    <input type="file" accept="image/*" ref={fileRef} onChange={handleImage} style={{ display: 'none' }} />
-                    📷 사진 추가 <span style={{ fontSize: '0.7rem', color: '#475569' }}>(최대 5MB)</span>
-                  </label>
-                )
-              }
+                ))}
+              </div>
+              {imageFiles.length < MAX_IMAGES && (
+                <label className="bp-image-upload-btn" style={{ marginTop: imagePreviews.length ? '0.5rem' : 0 }}>
+                  <input type="file" accept="image/*" multiple ref={fileRef} onChange={handleImage} style={{ display: 'none' }} />
+                  📷 사진 추가
+                  <span style={{ fontSize: '0.7rem', color: '#475569' }}>({imageFiles.length}/{MAX_IMAGES})</span>
+                </label>
+              )}
             </div>
 
             {uploading && (
