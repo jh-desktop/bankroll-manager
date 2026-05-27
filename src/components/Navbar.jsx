@@ -19,7 +19,7 @@ const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone = window.navigator.standalone === true
 
 export default function Navbar({ notifPermission, onEnableNotif, onSignOut, onGoHome }) {
-  const { adminMode, openModal, exitAdmin, showModal, closeModal, input, setInput, err, setErr, confirm } = useAdmin()
+  const { adminMode, isAdminUser, openModal, exitAdmin, showModal, closeModal, input, setInput, err, setErr, confirm } = useAdmin()
   const { user } = useAuth()
   const { currentWs } = useWorkspace()
   const location = useLocation()
@@ -81,12 +81,14 @@ export default function Navbar({ notifPermission, onEnableNotif, onSignOut, onGo
             </button>
           )}
 
-          <button
-            className="nav-link"
-            onClick={() => adminMode ? exitAdmin() : openModal()}
-            style={{ background: adminMode ? 'rgba(245,158,11,0.12)' : 'none', color: adminMode ? '#f59e0b' : 'var(--text-2)', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}>
-            🔑
-          </button>
+          {isAdminUser && (
+            <button
+              className="nav-link"
+              onClick={() => adminMode ? exitAdmin() : openModal()}
+              style={{ background: adminMode ? 'rgba(245,158,11,0.12)' : 'none', color: adminMode ? '#f59e0b' : 'var(--text-2)', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}>
+              🔑
+            </button>
+          )}
 
           {user && (
             <div style={{ position: 'relative' }}>
@@ -173,11 +175,13 @@ export default function Navbar({ notifPermission, onEnableNotif, onSignOut, onGo
                   🔔 알림 허용
                 </button>
               )}
-              <button
-                className={adminMode ? 'active' : ''}
-                onClick={() => { adminMode ? exitAdmin() : openModal(); closeMobile() }}>
-                🔑 {adminMode ? '관리자 OFF' : '관리자'}
-              </button>
+              {isAdminUser && (
+                <button
+                  className={adminMode ? 'active' : ''}
+                  onClick={() => { adminMode ? exitAdmin() : openModal(); closeMobile() }}>
+                  🔑 {adminMode ? '관리자 OFF' : '관리자'}
+                </button>
+              )}
               <button className="danger" onClick={() => { onSignOut(); closeMobile() }}>
                 로그아웃
               </button>
