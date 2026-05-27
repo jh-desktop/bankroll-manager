@@ -277,6 +277,18 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
             </div>
           </div>
         )}
+
+        {/* 푸터 */}
+        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+          <a
+            href="https://bankroll-manager-gamma.vercel.app/privacy"
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: '0.75rem', color: '#475569', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: '1px' }}
+          >
+            개인정보처리방침
+          </a>
+        </div>
       </div>
 
       {/* Created key popup */}
