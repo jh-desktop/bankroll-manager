@@ -104,7 +104,7 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
   const isPersonal = (ws) => ws.id === personalWsId
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#0a0f1e', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100dvh', background: '#192436', color: '#e2e8f0' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -162,9 +162,17 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
           })
           .map(ws => (
             <div key={ws.id} style={{
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              background: isPersonal(ws)
+                ? 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.06))'
+                : 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.06))',
+              border: isPersonal(ws)
+                ? '1.5px solid rgba(59,130,246,0.45)'
+                : '1.5px solid rgba(245,158,11,0.45)',
               borderRadius: '16px', padding: '1rem 1.125rem', marginBottom: '0.75rem',
               display: 'flex', alignItems: 'center', gap: '0.875rem',
+              boxShadow: isPersonal(ws)
+                ? '0 2px 16px rgba(59,130,246,0.12)'
+                : '0 2px 16px rgba(245,158,11,0.12)',
             }}>
               <button
                 onClick={() => selectWorkspace(ws)}
