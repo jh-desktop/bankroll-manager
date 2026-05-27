@@ -216,7 +216,7 @@ export default function PostDetailPage() {
     <div className="page">
       {/* 뒤로가기 */}
       <button className="bp-back-btn" onClick={() => navigate('/board')}>
-        ← 게시판
+        ‹ 게시판으로
       </button>
 
       {/* ── 글 본문 ── */}
