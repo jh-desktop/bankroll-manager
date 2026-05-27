@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>개인정보처리방침 — 뱅크롤 관리</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.7;
+      padding: 2rem 1rem 4rem;
+    }
+    .wrap { max-width: 680px; margin: 0 auto; }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f, #1d4ed8);
+      color: #fff;
+      border-radius: 16px;
+      padding: 2rem 1.75rem;
+      margin-bottom: 2rem;
+    }
+    .header h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .header p  { font-size: 0.88rem; opacity: 0.75; }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.78rem;
+      margin-top: 0.75rem;
+    }
+    section {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    p  { font-size: 0.9rem; color: #334155; margin-bottom: 0.5rem; }
+    ul { padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    li { font-size: 0.9rem; color: #334155; margin-bottom: 0.25rem; }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.88rem; margin-top: 0.5rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th { background: #f1f5f9; color: #475569; font-weight: 700; }
+    td { color: #334155; }
+    .contact {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      font-size: 0.88rem;
+      color: #1e40af;
+      margin-top: 0.5rem;
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>💰 뱅크롤 관리</h1>
+      <p>개인정보처리방침 (Privacy Policy)</p>
+      <span class="badge">최종 수정일: 2026년 05월 27일</span>
+    </div>
+
+    <section>
+      <h2>📋 개요</h2>
+      <p>
+        뱅크롤 관리 앱(이하 "서비스")은 사용자의 개인정보를 소중히 여깁니다.
+        본 방침은 어떤 정보를 수집하고, 어떻게 이용하며, 어떻게 보호하는지를 설명합니다.
+      </p>
+      <p>서비스를 이용함으로써 본 방침에 동의하는 것으로 간주됩니다.</p>
+    </section>
+
+    <section>
+      <h2>📦 수집하는 정보</h2>
+      <p>서비스는 Google 로그인을 통해 다음 정보를 수집합니다.</p>
+      <table>
+        <thead>
+          <tr><th>항목</th><th>수집 시점</th><th>목적</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>이름 (표시 이름)</td><td>로그인 시</td><td>서비스 내 사용자 식별</td></tr>
+          <tr><td>이메일 주소</td><td>로그인 시</td><td>계정 식별 및 중복 방지</td></tr>
+          <tr><td>프로필 사진</td><td>로그인 시</td><td>서비스 내 아바타 표시</td></tr>
+          <tr><td>FCM 토큰</td><td>알림 허용 시</td><td>푸시 알림 발송</td></tr>
+          <tr><td>입력 기록 데이터</td><td>사용 중</td><td>서비스 핵심 기능 제공</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:0.75rem; font-size:0.82rem; color:#64748b;">
+        위치 정보, 연락처, 결제 정보 등은 수집하지 않습니다.
+      </p>
+    </section>
+
+    <section>
+      <h2>🎯 정보 이용 목적</h2>
+      <ul>
+        <li>서비스 내 계정 생성 및 사용자 식별</li>
+        <li>워크스페이스 멤버 표시 및 기록 관리</li>
+        <li>사용자가 허용한 경우 푸시 알림 발송</li>
+        <li>서비스 이용 통계 및 오류 개선</li>
+      </ul>
+      <p>수집된 정보는 제3자 광고, 마케팅 목적으로 사용되지 않습니다.</p>
+    </section>
+
+    <section>
+      <h2>☁️ 데이터 저장 및 보안</h2>
+      <p>
+        모든 데이터는 <strong>Google Firebase (Firestore, Cloud Messaging)</strong>를 통해
+        Google Cloud 서버에 안전하게 저장됩니다.
+        데이터 전송은 HTTPS/TLS로 암호화됩니다.
+      </p>
+      <p>
+        Firebase의 보안 정책에 대한 자세한 내용은
+        <a href="https://firebase.google.com/support/privacy" target="_blank" style="color:#1d4ed8;">
+          firebase.google.com/support/privacy
+        </a>에서 확인하실 수 있습니다.
+      </p>
+    </section>
+
+    <section>
+      <h2>🔗 제3자 서비스</h2>
+      <p>서비스는 다음 제3자 서비스를 이용합니다.</p>
+      <ul>
+        <li><strong>Google Firebase</strong> — 인증, 데이터베이스, 푸시 알림</li>
+        <li><strong>Google Sign-In</strong> — 소셜 로그인</li>
+        <li><strong>Vercel</strong> — 앱 호스팅 및 API 서버</li>
+      </ul>
+      <p>위 서비스들은 각자의 개인정보처리방침을 따릅니다.</p>
+    </section>
+
+    <section>
+      <h2>🧹 데이터 보유 및 삭제</h2>
+      <ul>
+        <li>서비스 탈퇴 또는 워크스페이스 삭제 시 해당 데이터가 즉시 삭제됩니다.</li>
+        <li>FCM 토큰은 알림 비허용 또는 만료 시 자동 삭제됩니다.</li>
+        <li>데이터 삭제를 원하시면 아래 이메일로 요청하실 수 있습니다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>👤 사용자 권리</h2>
+      <p>사용자는 언제든지 다음 권리를 행사할 수 있습니다.</p>
+      <ul>
+        <li>본인 데이터 열람 및 수정 요청</li>
+        <li>데이터 삭제 요청 (계정 탈퇴)</li>
+        <li>푸시 알림 수신 거부 (기기 설정에서 변경 가능)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>🔔 어린이 개인정보</h2>
+      <p>
+        본 서비스는 만 14세 미만 아동을 대상으로 하지 않으며,
+        아동의 개인정보를 의도적으로 수집하지 않습니다.
+      </p>
+    </section>
+
+    <section>
+      <h2>✉️ 문의</h2>
+      <p>개인정보 관련 문의 및 삭제 요청은 아래로 연락해 주세요.</p>
+      <div class="contact">
+        📧 &nbsp;<strong>yoonjea123123@gmail.com</strong>
+      </div>
+    </section>
+
+    <div class="footer">
+      © 2026 뱅크롤 관리 · 본 방침은 사전 고지 없이 변경될 수 있습니다.
+    </div>
+  </div>
+</body>
+</html>
