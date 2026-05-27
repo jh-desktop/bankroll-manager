@@ -32,8 +32,8 @@ export default function LoginPage() {
         {/* 로고 */}
         <div className="login-logo">
           <div className="login-logo-icon">💰</div>
-          <h1 className="login-title">뱅크롤</h1>
-          <p className="login-sub">포커 뱅크롤 매니저</p>
+          <h1 className="login-title">그라인더</h1>
+          <p className="login-sub">홀덤 뱅크롤 관리</p>
         </div>
 
         {/* 구분선 */}

@@ -9,7 +9,7 @@ export default function OnboardingPage() {
   const { permission, enable } = useNotification(user)
 
   const [step, setStep] = useState(0)
-  const [wsName, setWsName] = useState(`${user?.displayName ?? '나'}의 뱅크롤`)
+  const [wsName, setWsName] = useState(`${user?.displayName ?? '나'}의 그라인더`)
   const [sharedOption, setSharedOption] = useState('skip') // 'skip' | 'create' | 'join'
   const [sharedName, setSharedName] = useState('')
   const [joinKey, setJoinKey] = useState('')
@@ -26,7 +26,7 @@ export default function OnboardingPage() {
     setLoading(true)
     setError('')
     try {
-      await setupNewUser(wsName.trim() || `${user?.displayName}의 뱅크롤`)
+      await setupNewUser(wsName.trim() || `${user?.displayName}의 그라인더`)
       if (sharedOption === 'create' && sharedName.trim()) {
         const result = await createSharedWorkspace(sharedName.trim())
         if (result?.key) { setCreatedKey(result.key); return }
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
             안녕하세요, {user?.displayName}님!
           </div>
           <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '1.5rem', lineHeight: 1.7 }}>
-            뱅크롤에 오신 것을 환영해요.<br />
+            그라인더에 오신 것을 환영해요.<br />
             시작 전에 빠른 설정이 필요해요.
           </div>
 
@@ -108,13 +108,13 @@ export default function OnboardingPage() {
 
           {/* 개인 워크스페이스 이름 */}
           <div style={{ marginBottom: '1rem' }}>
-            <label style={labelStyle}>개인 뱅크롤 이름</label>
+            <label style={labelStyle}>개인 워크스페이스 이름</label>
             <input
               style={inputStyle}
               value={wsName}
               onChange={e => setWsName(e.target.value)}
               maxLength={30}
-              placeholder="나만의 뱅크롤 이름"
+              placeholder="나만의 그라인더 이름"
             />
           </div>
 

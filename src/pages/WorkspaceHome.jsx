@@ -129,7 +129,7 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '1.4rem' }}>💰</span>
-          <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>뱅크롤</span>
+          <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>그라인더</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {notifPermission !== 'granted' && (

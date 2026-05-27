@@ -199,7 +199,7 @@ export default function AdminPage() {
         }))
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(historyData), '이력')
 
-      const fileName = `${currentWs?.name ?? '뱅크롤'}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      const fileName = `${currentWs?.name ?? '그라인더'}_${new Date().toISOString().slice(0, 10)}.xlsx`
       XLSX.writeFile(wb, fileName)
     } catch (e) {
       alert('내보내기 실패: ' + e.message)

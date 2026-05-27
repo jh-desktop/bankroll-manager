@@ -80,7 +80,7 @@ export function WorkspaceProvider({ children }) {
     if (!user) return
     const wsRef = doc(collection(db, 'workspaces'))
     await setDoc(wsRef, {
-      name: personalName || `${user.displayName}의 뱅크롤`,
+      name: personalName || `${user.displayName}의 그라인더`,
       type: 'personal', ownerId: user.uid,
       secretKey: null, createdAt: serverTimestamp(),
     })

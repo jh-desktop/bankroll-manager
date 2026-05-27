@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>기존 데이터 내보내기</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; box-sizing: border-box; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 2rem; max-width: 460px; width: 100%; }
+    h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+    p { color: #64748b; font-size: 0.85rem; margin: 0.5rem 0 1.5rem; line-height: 1.6; }
+    button { background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 0.75rem 1.5rem; font-size: 0.95rem; cursor: pointer; width: 100%; margin-top: 0.5rem; font-family: inherit; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.green { background: linear-gradient(135deg, #065f46, #10b981); }
+    .user-info { font-size: 0.82rem; color: #94a3b8; margin-bottom: 1.25rem; }
+    .range { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+    .range input[type=date] { flex: 1; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; }
+    .range span { color: #475569; font-size: 0.85rem; }
+    label { font-size: 0.78rem; color: #64748b; display: block; margin-bottom: 0.4rem; }
+    .hint { font-size: 0.75rem; color: #475569; margin-bottom: 1rem; }
+    .log { margin-top: 1rem; background: #0f172a; border: 1px solid #1e3a5f; border-radius: 8px; padding: 0.875rem; font-size: 0.8rem; color: #64748b; line-height: 1.8; min-height: 3rem; white-space: pre-wrap; }
+    .ok { color: #4ade80; }
+    .warn { color: #f59e0b; }
+    .err { color: #f87171; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>📥 기존 데이터 내보내기</h2>
+  <p>리뉴얼 이전 공용 컬렉션(<code>bankroll_records</code> 등)의 데이터를 Excel로 내보냅니다.</p>
+
+  <div id="login-section">
+    <button onclick="signIn()">🔐 Google 로그인</button>
+  </div>
+
+  <div id="export-section" style="display:none">
+    <div class="user-info" id="user-info"></div>
+    <label>기간 필터 (비워두면 전체 데이터)</label>
+    <div class="range">
+      <input type="date" id="from-date" placeholder="시작" />
+      <span>~</span>
+      <input type="date" id="to-date" placeholder="종료" />
+    </div>
+    <div class="hint">⚠️ 비워두면 모든 날짜 포함 · 날짜 입력 시 해당 기간만</div>
+    <button class="green" id="export-btn" onclick="exportData()">📥 Excel 내보내기</button>
+  </div>
+
+  <div class="log" id="log">대기 중...</div>
+</div>
+
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyAigIL0cqFsG9Y85Bc0krf6suLa9YQ_KZY",
+    authDomain: "schedule-manager-df97f.firebaseapp.com",
+    projectId: "schedule-manager-df97f",
+  })
+  const auth = firebase.auth()
+  const db   = firebase.firestore()
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById('login-section').style.display = 'none'
+      document.getElementById('export-section').style.display = 'block'
+      document.getElementById('user-info').textContent = `✅ ${user.displayName} (${user.email})`
+      log('로그인 완료. 내보내기 버튼을 누르세요.')
+    } else {
+      document.getElementById('login-section').style.display = 'block'
+      document.getElementById('export-section').style.display = 'none'
+      log('로그인이 필요합니다.')
+    }
+  })
+
+  function signIn() {
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => log('❌ 로그인 오류: ' + e.message, 'err'))
+  }
+
+  let logLines = []
+  function log(msg, type = '') {
+    const span = type ? `<span class="${type}">${msg}</span>` : msg
+    logLines.push(span)
+    if (logLines.length > 20) logLines.shift()
+    document.getElementById('log').innerHTML = logLines.join('\n')
+  }
+
+  async function fetchAll(name) {
+    log(`${name} 로딩 중...`)
+    try {
+      const snap = await db.collection(name).get()
+      log(`<span class="ok">✓ ${name}: ${snap.size}건</span>`, '')
+      return snap.docs.map(d => ({ _id: d.id, ...d.data() }))
+    } catch (e) {
+      log(`<span class="err">✗ ${name} 실패: ${e.message}</span>`, '')
+      return []
+    }
+  }
+
+  function filterByDate(rows, dateField, from, to) {
+    if (!from && !to) return rows
+    return rows.filter(r => {
+      const d = r[dateField]
+      if (!d) return true
+      if (from && d < from) return false
+      if (to && d > to) return false
+      return true
+    })
+  }
+
+  async function exportData() {
+    const btn = document.getElementById('export-btn')
+    btn.disabled = true
+    logLines = []
+
+    const from = document.getElementById('from-date').value
+    const to   = document.getElementById('to-date').value
+    if (from || to) log(`기간 필터: ${from || '처음'} ~ ${to || '끝'}`)
+    else log('기간 필터 없음 (전체)', 'warn')
+
+    try {
+      const users   = await fetchAll('bankroll_users')
+      const records = filterByDate(await fetchAll('bankroll_records'), 'date', from, to)
+      const history = filterByDate(await fetchAll('bankroll_history'), 'date', from, to)
+
+      if (records.length === 0 && !from && !to) {
+        log('⚠️ bankroll_records 가 비어있거나 다른 이름일 수 있습니다.', 'warn')
+      }
+
+      log('Excel 파일 생성 중...')
+      const wb = XLSX.utils.book_new()
+
+      const usersSheet = users
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map(u => ({ '이름': u.name ?? '', '순서': u.order ?? 0 }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(usersSheet.length ? usersSheet : [{ '이름': '(없음)' }]), '사용자')
+
+      const recordsSheet = records
+        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+        .map(r => ({
+          '날짜': r.date ?? '',
+          '이름': r.userName ?? '',
+          '금액': r.amount ?? 0,
+          '메모': r.note ?? '',
+        }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recordsSheet.length ? recordsSheet : [{ '날짜': '(없음)' }]), '기록')
+
+      // 유저별 합산 시트
+      const nameSet = [...new Set(records.map(r => r.userName).filter(Boolean))]
+      const summarySheet = nameSet.map(name => {
+        const ur = records.filter(r => r.userName === name)
+        const wins   = ur.filter(r => (r.amount ?? 0) > 0)
+        const losses = ur.filter(r => (r.amount ?? 0) < 0)
+        const totalIn  = wins.reduce((s, r) => s + (r.amount ?? 0), 0)
+        const totalOut = losses.reduce((s, r) => s + (r.amount ?? 0), 0)
+        const net = totalIn + totalOut
+        const total = totalIn + Math.abs(totalOut)
+        return {
+          '이름': name,
+          '순손익': net,
+          '수익 합계': totalIn,
+          '손실 합계': totalOut,
+          '수익률(%)': total > 0 ? parseFloat((totalIn / total * 100).toFixed(1)) : 0,
+          '수익 건수': wins.length,
+          '손실 건수': losses.length,
+          '총 기록': ur.length,
+        }
+      }).sort((a, b) => b['순손익'] - a['순손익'])
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summarySheet.length ? summarySheet : [{ '이름': '(없음)' }]), '유저별 합산')
+
+      const historySheet = history
+        .sort((a, b) => (b.timestamp?.seconds ?? 0) - (a.timestamp?.seconds ?? 0))
+        .map(h => ({
+          '일시': h.timestamp?.toDate?.().toLocaleString('ko-KR') ?? '',
+          '이름': h.userName ?? '',
+          '날짜': h.date ?? '',
+          '동작': h.action === 'create' ? '생성' : h.action === 'update' ? '수정' : '삭제',
+          '이전 금액': h.before?.amount ?? '',
+          '이후 금액': h.after?.amount ?? '',
+          '메모': h.after?.note || h.before?.note || '',
+        }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(historySheet.length ? historySheet : [{ '일시': '(없음)' }]), '이력')
+
+      const suffix = (from || to) ? `_${from || ''}_${to || ''}` : '_전체'
+      XLSX.writeFile(wb, `뱅크롤_기존데이터${suffix}.xlsx`)
+      log(`✅ 완료! 사용자 ${users.length}명 / 기록 ${records.length}건 / 이력 ${history.length}건`, 'ok')
+    } catch (e) {
+      log('❌ 오류: ' + e.message, 'err')
+      console.error(e)
+    } finally {
+      btn.disabled = false
+    }
+  }
+</script>
+</body>
+</html>

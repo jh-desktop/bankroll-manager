@@ -1,7 +1,7 @@
 {
-  "name": "뱅크롤 관리",
-  "short_name": "뱅크롤",
-  "description": "Davao 머니 뱅크롤 관리 시스템",
+  "name": "그라인더: 홀덤 뱅크롤 관리",
+  "short_name": "그라인더",
+  "description": "홀덤 뱅크롤 기록 및 팀 관리 앱",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

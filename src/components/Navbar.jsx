@@ -67,7 +67,7 @@ export default function Navbar({ notifPermission, onEnableNotif, onSignOut, onGo
           </button>
           <span className="nav-brand" title={currentWs?.name}>
             <span style={{ marginRight: '0.3rem', fontSize: '0.85rem' }}>{currentWs?.type === 'personal' ? '👤' : '👥'}</span>
-            {currentWs?.name ?? '뱅크롤'}
+            {currentWs?.name ?? '그라인더'}
           </span>
         </div>
 

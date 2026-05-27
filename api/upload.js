@@ -1,51 +1,46 @@
-import admin from 'firebase-admin'
 import crypto from 'crypto'
-
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-    })
-  } catch (e) {
-    console.error('Admin init error:', e.message)
-  }
-}
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { base64, filename, mimeType } = req.body ?? {}
-  if (!base64 || !filename) return res.status(400).json({ error: 'base64 and filename required' })
+  const { base64, mimeType } = req.body ?? {}
+  if (!base64) return res.status(400).json({ error: 'base64 required' })
 
-  const projectId = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT).project_id
-  // Admin SDK는 .appspot.com 버킷을 사용 (.firebasestorage.app은 접근 불가)
-  const bucketName = process.env.FIREBASE_STORAGE_BUCKET ?? `${projectId}.appspot.com`
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+  const apiKey    = process.env.CLOUDINARY_API_KEY
+  const apiSecret = process.env.CLOUDINARY_API_SECRET
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    return res.status(500).json({ error: 'Cloudinary credentials not configured' })
+  }
 
   try {
-    const buffer = Buffer.from(base64, 'base64')
-    const token  = crypto.randomUUID()
-    const path   = `board_images/${Date.now()}_${filename}`
+    const timestamp = Math.round(Date.now() / 1000)
+    const folder    = 'board_images'
+    const toSign    = `folder=${folder}&timestamp=${timestamp}${apiSecret}`
+    const signature = crypto.createHash('sha1').update(toSign).digest('hex')
 
-    // 버킷 이름 명시적으로 전달
-    const bucket = admin.storage().bucket(bucketName)
-    const file   = bucket.file(path)
+    const form = new FormData()
+    form.append('file',      `data:${mimeType ?? 'image/jpeg'};base64,${base64}`)
+    form.append('api_key',   apiKey)
+    form.append('timestamp', String(timestamp))
+    form.append('signature', signature)
+    form.append('folder',    folder)
 
-    await file.save(buffer, {
-      metadata: {
-        contentType: mimeType ?? 'image/jpeg',
-        metadata: { firebaseStorageDownloadTokens: token },
-      },
-    })
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      { method: 'POST', body: form }
+    )
 
-    const encodedPath = encodeURIComponent(path)
-    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error?.message ?? 'Upload failed')
 
-    console.log(`[upload] ok: ${path}, bucket: ${bucketName}`)
-    res.json({ url })
+    console.log(`[upload] ok: ${data.public_id}`)
+    res.json({ url: data.secure_url })
   } catch (e) {
-    console.error('[upload] error:', e.message, '| bucket:', bucketName)
-    res.status(500).json({ error: e.message, bucket: bucketName })
+    console.error('[upload] error:', e.message)
+    res.status(500).json({ error: e.message })
   }
 }
