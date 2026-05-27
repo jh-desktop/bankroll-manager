@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import {
   doc, collection, onSnapshot, setDoc, updateDoc, getDoc,
-  getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, deleteDoc,
+  getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, deleteDoc, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from './AuthContext'
@@ -141,6 +141,43 @@ export function WorkspaceProvider({ children }) {
     if (currentWs?.id === wsId) setCurrentWs(null)
   }, [user, currentWs])
 
+  const deleteWorkspace = useCallback(async wsId => {
+    if (!user) return
+
+    // 모든 멤버의 user doc에서 wsId 제거
+    const membersSnap = await getDocs(collection(db, 'workspaces', wsId, 'members'))
+    await Promise.all(
+      membersSnap.docs.map(m =>
+        updateDoc(doc(db, 'users', m.id), { workspaceIds: arrayRemove(wsId) }).catch(() => {})
+      )
+    )
+
+    // 서브컬렉션 일괄 삭제 (members, records, history)
+    for (const sub of ['members', 'records', 'history']) {
+      const snap = await getDocs(collection(db, 'workspaces', wsId, sub))
+      if (snap.docs.length === 0) continue
+      const batch = writeBatch(db)
+      snap.docs.forEach(d => batch.delete(d.ref))
+      await batch.commit()
+    }
+
+    // posts + 각 post의 comments 삭제
+    const postsSnap = await getDocs(collection(db, 'workspaces', wsId, 'posts'))
+    for (const postDoc of postsSnap.docs) {
+      const commentsSnap = await getDocs(collection(db, 'workspaces', wsId, 'posts', postDoc.id, 'comments'))
+      if (commentsSnap.docs.length > 0) {
+        const batch = writeBatch(db)
+        commentsSnap.docs.forEach(d => batch.delete(d.ref))
+        await batch.commit()
+      }
+      await deleteDoc(postDoc.ref)
+    }
+
+    // 워크스페이스 문서 삭제
+    await deleteDoc(doc(db, 'workspaces', wsId))
+    if (currentWs?.id === wsId) setCurrentWs(null)
+  }, [user, currentWs])
+
   const kickMember = useCallback(async (wsId, uid) => {
     await deleteDoc(doc(db, 'workspaces', wsId, 'members', uid))
     try {
@@ -164,7 +201,7 @@ export function WorkspaceProvider({ children }) {
       personalWsId: userDocData?.personalWorkspaceId,
       selectWorkspace, goHome,
       setupNewUser, createSharedWorkspace, joinWorkspace,
-      leaveWorkspace, kickMember, regenerateKey, renameWorkspace,
+      leaveWorkspace, deleteWorkspace, kickMember, regenerateKey, renameWorkspace,
     }}>
       {children}
     </WorkspaceContext.Provider>

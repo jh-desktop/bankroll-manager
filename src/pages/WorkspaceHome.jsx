@@ -9,7 +9,7 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
   const { user } = useAuth()
   const {
     workspaces, personalWsId, selectWorkspace,
-    createSharedWorkspace, joinWorkspace, leaveWorkspace,
+    createSharedWorkspace, joinWorkspace, leaveWorkspace, deleteWorkspace,
     kickMember, regenerateKey, renameWorkspace,
   } = useWorkspace()
 
@@ -29,6 +29,11 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
   const [regenKey, setRegenKey] = useState(null)
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  // 삭제 확인 모달
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   // Load members when settings modal opens
   useEffect(() => {
@@ -98,6 +103,21 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
     await leaveWorkspace(settingsWs.id)
     setSettingsWs(null)
     setSettingsLoading(false)
+  }
+
+  const handleDeleteWorkspace = async () => {
+    if (!settingsWs || deleteConfirmText !== '삭제합니다') return
+    setDeleting(true)
+    try {
+      await deleteWorkspace(settingsWs.id)
+      setSettingsWs(null)
+      setShowDeleteConfirm(false)
+      setDeleteConfirmText('')
+    } catch (e) {
+      alert('삭제 실패: ' + e.message)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const isOwner = (ws) => ws.ownerId === user?.uid
@@ -277,6 +297,55 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
         </div>
       )}
 
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && settingsWs && (
+        <div style={{ ...overlay, zIndex: 400 }} onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }}>
+          <div style={{ ...modal, maxWidth: '340px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f87171' }}>워크스페이스 삭제</div>
+            </div>
+
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '0.875rem', marginBottom: '1rem', fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.6 }}>
+              <strong style={{ color: '#f87171' }}>"{settingsWs.name}"</strong> 워크스페이스와<br />
+              모든 기록·이력·게시글이 <strong style={{ color: '#f87171' }}>영구 삭제</strong>됩니다.<br />
+              이 작업은 되돌릴 수 없습니다.
+            </div>
+
+            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.4rem' }}>
+              확인을 위해 아래에 <strong style={{ color: '#f87171' }}>삭제합니다</strong> 를 입력하세요
+            </div>
+            <input
+              style={{ ...formInput, border: deleteConfirmText === '삭제합니다' ? '1.5px solid #f87171' : '1.5px solid rgba(255,255,255,0.1)' }}
+              placeholder="삭제합니다"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              autoFocus
+            />
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.875rem' }}>
+              <button style={{ ...actionBtn, flex: 1 }} onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }}>
+                취소
+              </button>
+              <button
+                onClick={handleDeleteWorkspace}
+                disabled={deleteConfirmText !== '삭제합니다' || deleting}
+                style={{
+                  flex: 1, padding: '0.6rem 0.875rem', borderRadius: '10px', border: 'none',
+                  cursor: deleteConfirmText === '삭제합니다' ? 'pointer' : 'not-allowed',
+                  background: deleteConfirmText === '삭제합니다' ? 'linear-gradient(135deg, #dc2626, #ef4444)' : 'rgba(239,68,68,0.2)',
+                  color: deleteConfirmText === '삭제합니다' ? '#fff' : '#f87171',
+                  fontSize: '0.85rem', fontFamily: 'inherit', fontWeight: 700,
+                  opacity: deleting ? 0.6 : 1, transition: 'all 0.15s',
+                }}
+              >
+                {deleting ? '삭제 중…' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings modal */}
       {settingsWs && (
         <div style={overlay} onClick={() => { setSettingsWs(null); setRegenKey(null) }}>
@@ -360,6 +429,20 @@ export default function WorkspaceHome({ onSignOut, notifPermission, onEnableNoti
                 onClick={handleLeave} disabled={settingsLoading}>
                 나가기
               </button>
+            )}
+
+            {/* Delete (owner only, non-personal) */}
+            {!isPersonal(settingsWs) && isOwner(settingsWs) && (
+              <>
+                <div style={{ borderTop: '1px solid rgba(239,68,68,0.2)', marginTop: '0.75rem', paddingTop: '0.75rem' }} />
+                <button
+                  style={{ ...actionBtn, width: '100%', color: '#f87171', borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.06)' }}
+                  onClick={() => { setShowDeleteConfirm(true); setDeleteConfirmText('') }}
+                  disabled={settingsLoading}
+                >
+                  🗑 워크스페이스 삭제
+                </button>
+              </>
             )}
           </div>
         </div>
