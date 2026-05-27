@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js')
 
-const CACHE = 'bankroll-v3'
+const CACHE = 'grinder-v1'
 
 firebase.initializeApp({
   apiKey: 'AIzaSyAigIL0cqFsG9Y85Bc0krf6suLa9YQ_KZY',
