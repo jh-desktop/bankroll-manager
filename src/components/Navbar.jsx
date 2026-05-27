@@ -46,10 +46,24 @@ export default function Navbar({ notifPermission, onEnableNotif, onSignOut, onGo
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, flex: 1 }}>
           <button
             onClick={onGoHome}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '1.1rem', padding: '4px 6px', flexShrink: 0, lineHeight: 1 }}
             title="워크스페이스 홈"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              color: 'var(--text-1)',
+              fontSize: '1rem',
+              fontWeight: 700,
+              width: '32px', height: '32px',
+              flexShrink: 0,
+              transition: 'background 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.13)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
           >
-            ←
+            ‹
           </button>
           <span className="nav-brand" title={currentWs?.name}>
             <span style={{ marginRight: '0.3rem', fontSize: '0.85rem' }}>{currentWs?.type === 'personal' ? '👤' : '👥'}</span>
