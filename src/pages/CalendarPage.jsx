@@ -80,12 +80,13 @@ export default function CalendarPage() {
 
   const addEntry = useCallback(async () => {
     if (!addForm || !selected) return
-    const amount = parseFloat(addForm.amount)
-    if (isNaN(amount)) {
+    const raw = parseFloat(addForm.amount)
+    if (isNaN(raw)) {
       setAddForm(p => ({ ...p, amountErr: true }))
       setTimeout(() => setAddForm(p => p ? { ...p, amountErr: false } : p), 500)
       return
     }
+    const amount = addForm.sign === '-' ? -Math.abs(raw) : Math.abs(raw)
     const user = users.find(u => u.id === addForm.userId)
     const [y, m, d] = selected.split('-').map(Number)
     const note = addForm.note.trim()
@@ -242,15 +243,34 @@ export default function CalendarPage() {
                 {isAdding ? (
                   <div className="day-add-form">
                     <div className="day-add-inputs">
-                      <input
-                        className={`input input-amount${addForm.amountErr ? ' input-error' : ''}`}
-                        type="number"
-                        placeholder="💰 금액 (+/-)"
-                        value={addForm.amount}
-                        autoFocus
-                        onChange={e => setAddForm(p => ({ ...p, amount: e.target.value, amountErr: false }))}
-                        onKeyDown={e => e.key === 'Enter' && addEntry()}
-                      />
+                      <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
+                        <button
+                          type="button"
+                          onClick={() => setAddForm(p => ({ ...p, sign: p.sign === '+' ? '-' : '+' }))}
+                          style={{
+                            width: '40px', flexShrink: 0, borderRadius: 'var(--radius-sm)',
+                            border: '1.5px solid',
+                            borderColor: addForm.sign === '+' ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)',
+                            background: addForm.sign === '+' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)',
+                            color: addForm.sign === '+' ? '#34d399' : '#f87171',
+                            fontSize: '1.15rem', fontWeight: 900, cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {addForm.sign}
+                        </button>
+                        <input
+                          className={`input input-amount${addForm.amountErr ? ' input-error' : ''}`}
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          placeholder="금액"
+                          value={addForm.amount}
+                          autoFocus
+                          onChange={e => setAddForm(p => ({ ...p, amount: e.target.value, amountErr: false }))}
+                          onKeyDown={e => e.key === 'Enter' && addEntry()}
+                        />
+                      </div>
                       <input
                         className="input"
                         placeholder="메모 (선택)"
@@ -277,7 +297,7 @@ export default function CalendarPage() {
                 ) : (
                   <button
                     className="day-add-btn"
-                    onClick={() => setAddForm({ userId: user.id, amount: '', note: '', amountErr: false })}
+                    onClick={() => setAddForm({ userId: user.id, amount: '', note: '', amountErr: false, sign: '-' })}
                   >
                     + 추가
                   </button>
